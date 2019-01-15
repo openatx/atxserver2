@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+
+{% block title %}设备列表{% end %}
+
+{% block script %}
+{% end %}
+{% block style %}
+<style>
+    .color-right {
+        background-color: yellowgreen;
+        color: white;
+    }
+
+    .color-wrong {
+        color: red;
+    }
+</style>
+{% end %}
+
+{% block content %}
+<div class="container">
+    <el-table :data="tableData">
+        <!-- <el-table-column prop="udid" label="UDID"></el-table-column> -->
+        <el-table-column label="Status">
+            <template>Using</template>
+        </el-table-column>
+        <el-table-column prop="productSerial" label="Serial"></el-table-column>
+        <el-table-column prop="productBrand" label="Brand"></el-table-column>
+        <el-table-column prop="productVersion" label="Version"></el-table-column>
+    </el-table>
+</div>
+{% end %}
+
+{% block script %}
+<script>
+    $.getJSON(location.pathname + "?json")
+        .then((ret) => {
+            console.log(ret)
+            new Vue({
+                el: "#app",
+                data: Object.assign({
+                    user: {
+                        name: "anonymous",
+                        email: "anonymous@atx.com"
+                    }
+                }, ret.data),
+                computed: {
+                    tableData() {
+                        return [{
+                            udid: "kjnl-dfljsasdklifjdklsfjlasdflsdfk",
+                            using: false,
+                            present: false,
+                            ready: false,
+                            createdAt: "2018-12-1 12:00:01",
+                            productSerial: "17fbd6a",
+                            productBrand: "Sumsung",
+                            productHWAddr: "90:b6:86:7e:7d:ff",
+                            productVersion: "6.0.1",
+                            properies: {
+                                serial: "17fbd6a",
+                                brand: "sumsung",
+                                model: "SM-G9209",
+                                hwaddr: "90:b6:86:7e:7d:ff",
+                                version: "6.0.1",
+                                sdk: 23,
+                            },
+                            ip: "127.0.0.1",
+                            display: {
+                                height: 2560,
+                                width: 1440,
+                            },
+                        }]
+                    },
+                    filteredDevices() {
+                        return []
+                    }
+                },
+                filters: {
+                    formatTime(value) {
+                        var t = moment(value)
+                        return t.format("YYYY-M-D HH:mm:ss");
+                    },
+                    fromNow(value) {
+                        return moment(value).fromNow();
+                    }
+                },
+                methods: {
+                    formatTimeUsed() {
+                        // let duration = moment(this.finishedAt) - moment(this.createdAt);
+                        // return moment.utc(duration).format('HH:mm:ss')
+                    }
+                }
+            })
+        })
+</script>
+{% end %}
