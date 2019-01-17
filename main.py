@@ -10,8 +10,9 @@ import tornado.ioloop
 from logzero import logger
 from tornado.log import enable_pretty_logging
 
-from web import OpenIdLoginHandler, SimpleLoginHandler, make_app
+from web import make_app
 from web.database import db
+from web.views import OpenIdLoginHandler, SimpleLoginHandler
 
 
 def machine_ip():
