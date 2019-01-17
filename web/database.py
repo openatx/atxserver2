@@ -55,7 +55,7 @@ class DB(object):
         # init databases here
         safe_run(r.db_create(self.__dbname))
         rdb = r.db(self.__dbname)
-        safe_run(rdb.table_create("devices"))
+        safe_run(rdb.table_create("devices", primary_key='udid'))
 
         r.set_loop_type("tornado")
 
@@ -79,7 +79,7 @@ class DB(object):
 
     @property
     def device(self):
-        return self.table("devices")
+        return DBTable(self, "devices", primary_key='udid')
 
 
 class DBTable(object):
@@ -162,8 +162,6 @@ class DBTable(object):
         if id:
             rsql = rsql.get(id)
         return await rsql.update(data)
-
-
 
 
 db = DB(

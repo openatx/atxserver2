@@ -89,20 +89,40 @@ class DeviceHeartbeatWSHandler(tornado.websocket.WebSocketHandler):
         logger.info("new websocket connected: %s", self.request.remote_ip)
         pass
     
-    def _on_ping(self, req):
+    async def _on_ping(self, req):
+        """
+        {"command": "ping"}
+        """
         self.write_message("pong")
 
-    def _on_handshake(self, req):
-        self.write_message("you are online")
+    async def _on_handshake(self, req):
+        """
+        {"command": "handshake", "id": "ccddqq"}
+        """
+        self.write_message("you are online " + req['id'])
+    
+    async def _on_update(self, req):
+        """
+        {"command": "update", "devices": [
+            {"udid": "1232412312", "present": true}
+        ]}
+        """
+        for device in req['devices']:
+            print("D:", device)
+            id = await db.device.save(device)
+            self.write_message(json.dumps({"id": id}))
+            print("Device ID", id)
 
-    def on_message(self, message):
+
+    async def on_message(self, message):
         req = json.loads(message)
         assert 'command' in req
-
-        getattr(self, "_on_"+req['command'])(req)
+        
+        await getattr(self, "_on_"+req["command"])(req)
 
         """
         {"command": "ping"} // ping, update
+        
         // command: "updateDevices", data: []
 
         devices: [{
