@@ -16,13 +16,15 @@ from tornado.stack_context import ExceptionStackContext
 from tornado.util import ArgReplacer, unicode_type
 from tornado.web import RequestHandler
 
-if sys.version_info > (3, 0):
-    import urllib.parse as urlparse
-    import urllib.parse as urllib_parse
-    long = int
-else:
-    import urlparse
-    import urllib as urllib_parse
+import urllib.parse as urlparse
+import urllib.parse as urllib_parse
+# if sys.version_info > (3, 0):
+#     import urllib.parse as urlparse
+#     import urllib.parse as urllib_parse
+#     long = int
+# else:
+#     import urlparse
+#     import urllib as urllib_parse
 
 
 class AuthError(Exception):

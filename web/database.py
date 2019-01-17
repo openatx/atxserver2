@@ -1,11 +1,14 @@
 # coding: utf-8
 #
 
+import datetime
 import json
 import os
+
 import rethinkdb as r
-import datetime
 from logzero import logger
+
+from . import settings
 
 
 def time_now():
@@ -161,7 +164,7 @@ class DBTable(object):
         return await rsql.update(data)
 
 
-import settings
+
 
 db = DB(
     settings.RDB_DBNAME,
