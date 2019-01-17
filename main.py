@@ -18,14 +18,16 @@ import tornado.concurrent
 import tornado.ioloop
 import tornado.web
 import tornado.websocket
+from bunch import Bunch
 from logzero import logger
 from tornado import gen
 from tornado.httpclient import AsyncHTTPClient
 from tornado.log import enable_pretty_logging
+from tornado.web import authenticated
 
 import settings
+from auth import AuthError, OpenIdMixin
 from database import db, jsondate_loads
-
 
 
 def _data_handler(obj):
@@ -38,6 +40,22 @@ def jsondate_dumps(data):
 
 
 class BaseRequestHandler(tornado.web.RequestHandler):
+    __user_db = {}
+
+    def get_current_user(self):
+        """ https://www.tornadoweb.org/en/stable/guide/security.html#user-authentication """
+        id = self.get_secure_cookie("user_id")  # here is bytes not str
+        if id:
+            id = id.decode()
+        info = self.__user_db.get(id)
+        return Bunch(info) if info else None
+
+    def set_current_user(self, email, username):
+        id = email
+        self.set_secure_cookie("user_id", id)
+        info = dict(username=username, email=email)
+        self.__user_db[id] = info
+
     def write_json(self, data):
         assert isinstance(data, dict)
         self.set_header("Content-Type", "application/json; charset=utf-8")
@@ -55,6 +73,49 @@ class BaseRequestHandler(tornado.web.RequestHandler):
 
     async def get_json(self, *args):
         pass
+
+
+class OpenIdLoginHandler(BaseRequestHandler, OpenIdMixin):
+    _OPENID_ENDPOINT = 'https://login.netease.com/openid/'
+
+    async def get(self):
+        if self.get_argument("openid.mode", False):
+            try:
+                user = await self.get_authenticated_user()
+            except AuthError as e:
+                self.write(
+                    "<code>Auth error: {}</code> <a href='/login'>Login</a>".
+                    format(e))
+            else:
+                logger.info("User info: %s", user)
+                self.set_current_user(user['email'], user['username'])
+                next_url = self.get_argument('next', '/')
+                self.redirect(next_url)
+        else:
+            self.authenticate_redirect()
+
+
+class SimpleLoginHandler(BaseRequestHandler):
+    def get(self):
+        self.set_cookie("next", self.get_argument("next", "/"))
+        self.write('<html><body><form action="/login" method="post">'
+                   'Name: <input type="text" name="name">'
+                   '<input type="submit" value="Sign in">'
+                   '</form></body></html>')
+
+    def post(self):
+        name = self.get_argument("name")
+        email = name + "@anonymous.com"
+        self.set_current_user(email, name)
+        next_url = self.get_cookie("next", "/")
+        self.clear_cookie("next")
+        self.redirect(next_url)
+
+
+class LogoutHandler(BaseRequestHandler):
+    def get(self):
+        self.clear_all_cookies()
+        self.redirect("/login")
 
 
 class MainHandler(BaseRequestHandler):
@@ -96,13 +157,15 @@ class DeviceItemHandler(BaseRequestHandler):
 
 class DeviceListHandler(BaseRequestHandler):
     """ Device List will show in first page """
+
+    @authenticated
     async def get(self):
         """ get data from database """
         if self.get_argument('json', None) is not None:
             self.write_json({
                 "success": True,
                 "data": await db.table("devices").get_all(limit=50, desc="createdAt"),
-            })
+            }) # yapf: disable
             return
         self.render("index.html")
 
@@ -110,10 +173,7 @@ class DeviceListHandler(BaseRequestHandler):
         """ add data into database """
         data = jsondate_loads(self.request.body)
         id = await db.table("devices").save(data)
-        self.write_json({
-            "id": id,
-            "data": data
-        })
+        self.write_json({"id": id, "data": data})
 
 
 class DeviceChangesWSHandler(tornado.websocket.WebSocketHandler):
@@ -131,7 +191,7 @@ class DeviceChangesWSHandler(tornado.websocket.WebSocketHandler):
                 self.write_json({
                     "event": "insert" if data['old_val'] is None else 'update',
                     "data": data['new_val'],
-                })
+                }) # yapf: disable
 
     def on_message(self, msg):
         logger.debug("receive message %s", msg)
@@ -142,14 +202,17 @@ class DeviceChangesWSHandler(tornado.websocket.WebSocketHandler):
         print("Websocket closed")
 
 
-def make_app(**settings):
+def make_app(login_handler, **settings):
     settings['template_path'] = 'templates'
     settings['static_path'] = 'static'
     settings['cookie_secret'] = os.environ.get("SECRET", "SECRET:_")
     settings['login_url'] = '/login'
     settings['websocket_ping_interval'] = 10
+
     return tornado.web.Application([
         (r"/", MainHandler),
+        (r"/login", login_handler),
+        (r"/logout", LogoutHandler),
         (r"/upload", UploadHandler),
         (r"/devices", DeviceListHandler),
         (r"/devices/([^/]+)", DeviceItemHandler),
@@ -167,30 +230,40 @@ def machine_ip():
         s.close()
 
 
+_auth_handlers = {
+    "simple": SimpleLoginHandler,
+    "openid": OpenIdLoginHandler,
+}
+
+
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        '-p', '--port', type=int, default=4000, help='listen port')
-    parser.add_argument(
-        '-d',
-        '--debug',
-        action='store_true',
-        help='open debug log, and open hot reload')
+    # yapf: disable
+    parser.add_argument('-p', '--port', type=int, default=4000, help='listen port')
+    parser.add_argument('-d', '--debug', action='store_true', help='open debug log, and open hot reload')
+    parser.add_argument('--auth', type=str, default='simple', choices=_auth_handlers.keys(), help='authentication method')
+    parser.add_argument('--auth-conf-file', type=argparse.FileType('r'), help='authentication config file')
+    # yapf: enable
+
     args = parser.parse_args()
+    print(args)
     enable_pretty_logging()
 
     db.setup()
 
     ioloop = tornado.ioloop.IOLoop.current()
 
+    # TODO(ssx): for debug use
     async def dbtest():
-        items = await db.table("devices").get_all(limit=2, rsql_hook=lambda q: q.order_by(r.desc("createdAt")))
+        items = await db.table("devices").get_all(
+            limit=2, rsql_hook=lambda q: q.order_by(r.desc("createdAt")))
         for item in items:
             pprint(item)
 
     ioloop.spawn_callback(dbtest)
 
-    app = make_app(debug=args.debug)
+    login_handler = _auth_handlers[args.auth]
+    app = make_app(login_handler, debug=args.debug)
     app.listen(args.port)
     logger.info("listen on port http://%s:%d", machine_ip(), args.port)
     try:
