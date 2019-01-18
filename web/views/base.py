@@ -34,7 +34,7 @@ class CurrentUserMixin(object):
         ret = await db.user.save({"email": email, "username": username})
         if ret['inserted']:
             await db.user.save({
-                "token": str(uuid.uuid4()),
+                "secretKey": "S:"+str(uuid.uuid4()),
                 "createdAt": time_now(),
                 "lastLoggedInAt": time_now(),
             }, ret['id'])

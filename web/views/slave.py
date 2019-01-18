@@ -14,6 +14,10 @@ from .base import BaseRequestHandler, BaseWebSocketHandler
 class SlaveHeartbeatWSHandler(BaseWebSocketHandler):
     """ monitor device online or offline """
 
+    def initialize(self):
+        self._owner = None
+        self._id = None
+
     def open(self):
         """
         id: xxxx,
@@ -38,7 +42,7 @@ class SlaveHeartbeatWSHandler(BaseWebSocketHandler):
 
         {"command": "handshake",
          "id": "ccddqq",
-         "token": "3377_121ffz319"}
+         "owner": "someone@domain.com"}
         """
         self.write_message("you are online " + req['id'])
 
