@@ -20,7 +20,7 @@ class OpenIdLoginHandler(BaseRequestHandler, OpenIdMixin):
                     format(e))
             else:
                 logger.info("User info: %s", user)
-                self.set_current_user(user['email'], user['username'])
+                await self.set_current_user(user['email'], user['username'])
                 next_url = self.get_argument('next', '/')
                 self.redirect(next_url)
         else:
@@ -35,10 +35,10 @@ class SimpleLoginHandler(BaseRequestHandler):
                    '<input type="submit" value="Sign in">'
                    '</form></body></html>')
 
-    def post(self):
+    async def post(self):
         name = self.get_argument("name")
         email = name + "@anonymous.com"
-        self.set_current_user(email, name)
+        await self.set_current_user(email, name)
         next_url = self.get_cookie("next", "/")
         self.clear_cookie("next")
         self.redirect(next_url)

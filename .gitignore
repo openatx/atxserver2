@@ -104,5 +104,6 @@ venv.bak/
 .mypy_cache/
 
 # user defined
+run.sh
 run.bat
 .vscode/

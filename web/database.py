@@ -33,6 +33,17 @@ def jsondate_loads(s):
 
 
 class DB(object):
+    __tables = {
+        "device": {
+            "name": "devices",
+            "primary_key": "udid",
+        },
+        "user": {
+            "name": "users",
+            "primary_key": "email",
+        }
+    }
+
     def __init__(self, db='demo', **kwargs):
         self.__connect_kwargs = kwargs
         self.__dbname = db
@@ -54,8 +65,12 @@ class DB(object):
 
         # init databases here
         safe_run(r.db_create(self.__dbname))
+
         rdb = r.db(self.__dbname)
-        safe_run(rdb.table_create("devices", primary_key='udid'))
+        for tbl in self.__tables.values():
+            table_name = tbl['name']
+            primary_key = tbl.get('primary_key', 'id')
+            safe_run(rdb.table_create(table_name, primary_key=primary_key))
 
         r.set_loop_type("tornado")
 
@@ -77,9 +92,16 @@ class DB(object):
         """
         return DBTable(self, name)
 
-    @property
-    def device(self):
-        return DBTable(self, "devices", primary_key='udid')
+    def __getattr__(self, name):
+        """
+        use this magic function, it is possible to write code like this
+
+            user = await db.user.get("codeskyblue@gmail.com")
+        """
+        if name not in self.__tables:
+            raise AttributeError("database table not exist", name)
+        tbl = self.__tables[name]
+        return DBTable(self, tbl['name'], primary_key=tbl.get('primary_key'))
 
 
 class DBTable(object):
@@ -95,12 +117,37 @@ class DBTable(object):
     def _run(self, rsql):
         return self.__db.run(rsql)
 
+    async def update(self, data: dict, id=None):
+        """
+        Update data into database
+
+        Args:
+            data: dict
+            id: primary_key id, if not specified, update will apply to all
+
+        Returns:
+            dict of updated details
+            {
+                "deleted": 0 ,
+                "errors": 0 ,
+                "inserted": 0 ,
+                "replaced": 0 ,
+                "skipped": 0 ,
+                "unchanged": 0
+            }
+        """
+        rsql = self._table
+        if id:
+            rsql = rsql.get(id)
+        ret = await self._run(rsql.update(data))
+        return not ret
+
     async def save(self, data: dict, id=None):
         """
         Update or insert data into database
 
         Returns:
-            id
+            dict, id will be in it
         """
         data = data.copy()
         if id:
@@ -111,7 +158,8 @@ class DBTable(object):
             id = data[self.__pkey]
             ret = await self._run(self._table.get(id).update(data))
             if not ret['skipped']:
-                return id
+                ret['id'] = id
+                return ret
 
         # add some data
         data['createdAt'] = time_now()
@@ -120,9 +168,11 @@ class DBTable(object):
         assert ret['errors'] == 0
 
         if "generated_keys" in ret:
-            return ret["generated_keys"][0]
+            ret['id'] = ret["generated_keys"][0]
+            return ret
 
-        return data[self.__pkey]
+        ret['id'] = id
+        return ret
 
     async def get(self, id):
         return await self._run(self._table.get(id))
@@ -156,12 +206,6 @@ class DBTable(object):
         conn = await self.__db.connection()
         feed = await r.table(self.__table_name).changes().run(conn)
         return conn, feed
-
-    async def update(self, data: dict, id=None):
-        rsql = self._table
-        if id:
-            rsql = rsql.get(id)
-        return await rsql.update(data)
 
 
 db = DB(

@@ -3,13 +3,12 @@
 
 import json
 
-import tornado.websocket
 from logzero import logger
 from tornado.web import authenticated
 
-from ..database import db, jsondate_loads
+from ..database import db, jsondate_loads, time_now
 from ..utils import jsondate_dumps
-from .base import BaseRequestHandler
+from .base import BaseRequestHandler, BaseWebSocketHandler
 
 
 class DeviceItemHandler(BaseRequestHandler):
@@ -37,7 +36,7 @@ class DeviceListHandler(BaseRequestHandler):
             self.write_json({
                 "success": True,
                 "data": await db.table("devices").get_all(limit=50, desc="createdAt"),
-            }) # yapf: disable
+            })  # yapf: disable
             return
         self.render("index.html")
 
@@ -48,8 +47,7 @@ class DeviceListHandler(BaseRequestHandler):
         self.write_json({"id": id, "data": data})
 
 
-
-class DeviceChangesWSHandler(tornado.websocket.WebSocketHandler):
+class DeviceChangesWSHandler(BaseWebSocketHandler):
     def write_json(self, data):
         self.ws_connection.write_message(jsondate_dumps(data))
 
@@ -64,7 +62,7 @@ class DeviceChangesWSHandler(tornado.websocket.WebSocketHandler):
                 self.write_json({
                     "event": "insert" if data['old_val'] is None else 'update',
                     "data": data['new_val'],
-                }) # yapf: disable
+                })  # yapf: disable
 
     def on_message(self, msg):
         logger.debug("receive message %s", msg)
@@ -75,69 +73,50 @@ class DeviceChangesWSHandler(tornado.websocket.WebSocketHandler):
         print("Websocket closed")
 
 
-class DeviceHeartbeatWSHandler(tornado.websocket.WebSocketHandler):
-    """ monitor device online or offline """
-    def check_origin(self, origin):
-        return True
-
-    def open(self):
-        """
-        id: xxxx,
-        name: xxxx,
-        bindAddress: "10.0.0.1:6477",
-        """
-        logger.info("new websocket connected: %s", self.request.remote_ip)
+class DeviceControlHandler(BaseRequestHandler):
+    @authenticated
+    def get(self, udid):
         pass
-    
-    async def _on_ping(self, req):
-        """
-        {"command": "ping"}
-        """
-        self.write_message("pong")
-
-    async def _on_handshake(self, req):
-        """
-        {"command": "handshake", "id": "ccddqq"}
-        """
-        self.write_message("you are online " + req['id'])
-    
-    async def _on_update(self, req):
-        """
-        {"command": "update", "devices": [
-            {"udid": "1232412312", "present": true}
-        ]}
-        """
-        for device in req['devices']:
-            print("D:", device)
-            id = await db.device.save(device)
-            self.write_message(json.dumps({"id": id}))
-            print("Device ID", id)
 
 
-    async def on_message(self, message):
-        req = json.loads(message)
-        assert 'command' in req
-        
-        await getattr(self, "_on_"+req["command"])(req)
+class OccupyError(Exception):
+    pass
 
-        """
-        {"command": "ping"} // ping, update
-        
-        // command: "updateDevices", data: []
 
-        devices: [{
-            "udid": "xxxxsdfasdf",
-            "present": true,
-        }, {
-            "udid": "xxlksjdfljsf",
-            "properties": {
-                "version": "1.2.0",
-            },
-            "present": false,
-        }]
-        """
-        logger.info("receive message: %s", message)
-    
-    def on_close(self):
-        logger.info("websocket closed: %s", self.request.remote_ip)
-        pass
+async def occupy_device(email: str, udid: str):
+    device = await db.device.get(udid)
+    if not device:
+        raise OccupyError("device not exist")
+    if not device.get('present'):
+        raise OccupyError("device absent")
+    if device.get('using'):
+        if device.get('userId') == email:
+            # already used by ..{email}
+            return
+        raise OccupyError("device busy")
+
+    ret = await db.device.update({"using": True}, udid)
+    if ret['skipped'] == 1:
+        raise OccupyError(
+            "not fast enough, device have been taken from others")
+    await db.device.update({"userId": email, "usingBebanAt": time_now()}, udid)
+
+
+class DeviceBookWSHandler(BaseWebSocketHandler):
+    """ 连接成功时占用，断开时释放设备 """
+
+    async def open(self, udid):
+        if not self.current_user:
+            self.write_message("need to login")
+            self.close()
+            return
+
+        email = self.current_user.email
+        try:
+            await occupy_device(email, udid)
+        except OccupyError as e:
+            self.write_message(str(e))
+            self.close()
+            return
+
+        self.write_message("device is yours")

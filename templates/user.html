@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block title %}设备列表{% end %}
+
+{% block script %}
+{% end %}
+{% block style %}
+<style>
+    .color-right {
+        background-color: yellowgreen;
+        color: white;
+    }
+
+    .color-wrong {
+        color: red;
+    }
+</style>
+{% end %}
+
+{% block content %}
+<div class="container">
+    <h3>用户信息</h3>
+    <div>
+        <div>
+            <label>Email</label>
+            {{current_user.email}}
+        </div>
+        <div>
+            <label>Username</label>
+            {{current_user.username}}
+        </div>
+    </div>
+</div>
+{% end %}
+
+{% block script %}
+<script>
+    $.getJSON("/api/user")
+        .then((ret) => {
+            console.log(ret)
+            new Vue({
+                el: "#app",
+            })
+        })
+</script>
+{% end %}

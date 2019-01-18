@@ -1,28 +1,60 @@
 # coding:utf-8
-# 
+#
 
 import tornado.web
+import tornado.websocket
 from bunch import Bunch
+from tornado.ioloop import IOLoop
+import uuid
 
+from ..database import db, time_now
 from ..utils import jsondate_dumps
 
+_user_db = {}
 
-class BaseRequestHandler(tornado.web.RequestHandler):
-    __user_db = {}
 
-    def get_current_user(self):
-        """ https://www.tornadoweb.org/en/stable/guide/security.html#user-authentication """
+class CurrentUserMixin(object):
+
+    def bunchify(self, d: dict):
+        return Bunch(d) if d else None
+
+    async def get_current_user_async(self) ->Bunch:
+        """
+        method get_current_user can not be sync, so init current_user in in prepare
+
+        Refs: https://www.tornadoweb.org/en/stable/guide/security.html#user-authentication
+        """
         id = self.get_secure_cookie("user_id")  # here is bytes not str
+        # print("ID:", id)
         if id:
             id = id.decode()
-        info = self.__user_db.get(id)
-        return Bunch(info) if info else None
+        return self.bunchify(await db.user.get(id) if id else None)
 
-    def set_current_user(self, email, username):
-        id = email
-        self.set_secure_cookie("user_id", id)
-        info = dict(username=username, email=email)
-        self.__user_db[id] = info
+    async def set_current_user(self, email: str, username: str):
+        ret = await db.user.save({"email": email, "username": username})
+        if ret['inserted']:
+            await db.user.save({
+                "token": str(uuid.uuid4()),
+                "createdAt": time_now(),
+                "lastLoggedInAt": time_now(),
+            }, ret['id'])
+        elif ret['unchanged']:
+            await db.user.save({
+                "lastLoggedInAt": time_now(),
+            }, ret['id'])
+
+        # print("RET:", ret)
+        self.set_secure_cookie("user_id", ret['id'])
+
+
+class BaseRequestHandler(CurrentUserMixin, tornado.web.RequestHandler):
+    """
+    Note:
+        CurrentUserMixin should before RequestHandler to make sure get_current_user override
+    """
+
+    async def prepare(self):
+        self.current_user = await self.get_current_user_async()
 
     def write_json(self, data):
         assert isinstance(data, dict)
@@ -41,3 +73,13 @@ class BaseRequestHandler(tornado.web.RequestHandler):
 
     async def get_json(self, *args):
         pass
+
+
+class BaseWebSocketHandler(CurrentUserMixin, tornado.websocket.WebSocketHandler):
+    """ update current_user when websocket created """
+
+    async def prepare(self):
+        self.current_user = await self.get_current_user_async()
+
+    def check_origin(self, origin):
+        return True
