@@ -63,6 +63,9 @@ python3 main.py
 
 ## Thanks
 - [https://www.easyicon.net](https://www.easyicon.net/iconsearch/hub/)
+- <https://github.com/mikusjelly/apkutils>
+- <https://github.com/gtsystem/python-remotezip>
+
 
 ## LICENSE
 [MIT](LICENSE)
