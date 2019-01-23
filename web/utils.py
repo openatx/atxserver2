@@ -4,9 +4,10 @@
 import json
 import os
 import time
+import shutil
 from xml.dom import minidom
 
-from apkutils import APK
+from apkutils import APK, apkfile
 
 
 def _data_handler(obj):
@@ -19,9 +20,26 @@ def jsondate_dumps(data):
 
 
 class Manifest(object):
-    def __init__(self, content):
+    def __init__(self, apk: APK):
+        content = apk.get_org_manifest()
         self._dom = minidom.parseString(content)
         self._permissions = None
+        self._apk = apk
+    
+    @property
+    def icon_path(self):
+        return self._apk.get_app_icon()
+
+    def save_icon(self, icon_path:str):
+        """
+        Args:
+            icon_path (str): should endwith .png
+        """
+        zip_icon_path = self._apk.get_app_icon()
+        with apkfile.ZipFile(self._apk.apk_path) as z:
+            with z.open(zip_icon_path) as f:
+                with open(icon_path, 'wb') as w:
+                    shutil.copyfileobj(f, w)
 
     @property
     def package_name(self):
@@ -74,13 +92,12 @@ class Manifest(object):
 def parse_apkfile(file:str) -> Manifest:
     '''
     Args:
-        - file: filename or file object
+        - file: filename
 
     Returns:
         Manifest(Class)
     '''
-    apk = APK(file)
-    return Manifest(apk.get_org_manifest())
+    return Manifest(APK(file))
 
 
 def remove_useless_apk():

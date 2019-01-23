@@ -1,11 +1,13 @@
 # coding:utf-8
 #
 
+import uuid
+
 import tornado.web
 import tornado.websocket
 from bunch import Bunch
 from tornado.ioloop import IOLoop
-import uuid
+from tornado.web import authenticated
 
 from ..database import db, time_now
 from ..utils import jsondate_dumps
@@ -14,11 +16,10 @@ _user_db = {}
 
 
 class CurrentUserMixin(object):
-
     def bunchify(self, d: dict):
         return Bunch(d) if d else None
 
-    async def get_current_user_async(self) ->Bunch:
+    async def get_current_user_async(self) -> Bunch:
         """
         method get_current_user can not be sync, so init current_user in in prepare
 
@@ -34,7 +35,7 @@ class CurrentUserMixin(object):
         ret = await db.user.save({"email": email, "username": username})
         if ret['inserted']:
             await db.user.save({
-                "secretKey": "S:"+str(uuid.uuid4()),
+                "secretKey": "S:" + str(uuid.uuid4()),
                 "createdAt": time_now(),
                 "lastLoggedInAt": time_now(),
             }, ret['id'])
@@ -75,7 +76,15 @@ class BaseRequestHandler(CurrentUserMixin, tornado.web.RequestHandler):
         pass
 
 
-class BaseWebSocketHandler(CurrentUserMixin, tornado.websocket.WebSocketHandler):
+class AuthRequestHandler(BaseRequestHandler):
+    """ request user logged in before http request """
+    async def prepare(self):
+        await super().prepare()
+        authenticated(lambda x: None)(self)
+
+
+class BaseWebSocketHandler(CurrentUserMixin,
+                           tornado.websocket.WebSocketHandler):
     """ update current_user when websocket created """
 
     async def prepare(self):
@@ -83,3 +92,20 @@ class BaseWebSocketHandler(CurrentUserMixin, tornado.websocket.WebSocketHandler)
 
     def check_origin(self, origin):
         return True
+
+
+class CorsMixin(object):
+    CORS_ORIGIN = '*'
+    CORS_METHODS = 'GET,POST,OPTIONS'
+    CORS_CREDENTIALS = True
+    CORS_HEADERS = "x-requested-with"
+
+    def set_default_headers(self):
+        self.set_header("Access-Control-Allow-Origin", self.CORS_ORIGIN)
+        self.set_header("Access-Control-Allow-Headers", self.CORS_HEADERS)
+        self.set_header('Access-Control-Allow-Methods', self.CORS_METHODS)
+
+    def options(self):
+        # no body
+        self.set_status(204)
+        self.finish()

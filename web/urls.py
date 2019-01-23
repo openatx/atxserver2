@@ -1,19 +1,21 @@
 # coding: utf-8
 #
 
-from .views import MainHandler, LogoutHandler
-from .views.device import (DeviceChangesWSHandler,
-                           DeviceItemHandler, DeviceListHandler)
-from .views.slave import SlaveHeartbeatWSHandler
-from .views.user import UserHandler, APIUserHandler
-from .views.upload import UploadListHandler
+import os
 
+from .views import LogoutHandler, MainHandler
+from .views.device import (DeviceChangesWSHandler, DeviceItemHandler,
+                           DeviceListHandler)
+from .views.slave import SlaveHeartbeatWSHandler
+from .views.upload import UploadItemHandler, UploadListHandler
+from .views.user import APIUserHandler, UserHandler
 
 urlpatterns = [
     (r"/", MainHandler),
     (r"/user", UserHandler),
     (r"/logout", LogoutHandler),
-    (r"/uploads", UploadListHandler),  # TODO
+    (r"/uploads", UploadListHandler),
+    (r"/uploads/(.*)", UploadItemHandler, {'path': os.path.join(os.getcwd(), 'uploads')}),
     (r"/devices", DeviceListHandler),
     (r"/devices/([^/]+)", DeviceItemHandler),
     (r"/websocket/devicechanges", DeviceChangesWSHandler),

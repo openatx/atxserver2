@@ -8,7 +8,7 @@ from tornado.web import authenticated
 
 from ..database import db, jsondate_loads, time_now
 from ..utils import jsondate_dumps
-from .base import BaseRequestHandler, BaseWebSocketHandler
+from .base import BaseRequestHandler, BaseWebSocketHandler, AuthRequestHandler
 
 
 class DeviceItemHandler(BaseRequestHandler):
@@ -26,10 +26,9 @@ class DeviceItemHandler(BaseRequestHandler):
         self.render("record.html")
 
 
-class DeviceListHandler(BaseRequestHandler):
+class DeviceListHandler(AuthRequestHandler):
     """ Device List will show in first page """
 
-    @authenticated
     async def get(self):
         """ get data from database """
         if self.get_argument('json', None) is not None:
@@ -73,8 +72,7 @@ class DeviceChangesWSHandler(BaseWebSocketHandler):
         print("Websocket closed")
 
 
-class DeviceControlHandler(BaseRequestHandler):
-    @authenticated
+class DeviceControlHandler(AuthRequestHandler):
     def get(self, udid):
         pass
 

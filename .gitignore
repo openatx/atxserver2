@@ -107,3 +107,4 @@ venv.bak/
 run.sh
 run.bat
 .vscode/
+uploads/
