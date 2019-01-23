@@ -4,7 +4,7 @@
 import json
 
 from logzero import logger
-from tornado.web import authenticated
+from tornado.web import authenticated, RequestHandler
 
 from ..database import db, jsondate_loads, time_now
 from ..utils import jsondate_dumps
@@ -26,7 +26,7 @@ class DeviceItemHandler(BaseRequestHandler):
         self.render("record.html")
 
 
-class DeviceListHandler(AuthRequestHandler):
+class DeviceListHandler(BaseRequestHandler):
     """ Device List will show in first page """
 
     async def get(self):
@@ -34,7 +34,10 @@ class DeviceListHandler(AuthRequestHandler):
         if self.get_argument('json', None) is not None:
             self.write_json({
                 "success": True,
-                "data": await db.table("devices").get_all(limit=50, desc="createdAt"),
+                "data": {
+                    "devices": await db.table("devices").get_all(limit=50, desc="createdAt"),
+                    "count": await db.table("devices").count(),
+                }
             })  # yapf: disable
             return
         self.render("index.html")

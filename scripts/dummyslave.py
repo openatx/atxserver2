@@ -1,28 +1,28 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-import time
 import asyncio as aio
+import json
+import time
+
+from tornado import websocket
+from tornado.ioloop import IOLoop
 
 
-async def say_after(message, seconds):
-    await aio.sleep(seconds)
-    print(f"{message}")
+class WebSocket(websocket.WebSocketClientConnection):
+    async def write_message(self, message, binary=False):
+        if isinstance(message, dict):
+            message = json.dumps(message)
+        return await super().write_message(message)
 
 
 async def main():
-    task1 = aio.create_task(say_after("hello", 1))
-    task2 = aio.create_task(say_after("world", 1))
-
-    print(f"started at: {time.ctime()}")
-    print("AA")
-    await task1
-    print("BB")
-    await task2
-    print("CC")
-    print(f"finished at: {time.ctime()}")
+    ws = await websocket.websocket_connect("ws://localhost:4000/websocket/heartbeat")
+    ws.__class__ = WebSocket
+    await ws.write_message({"command": "ping"})
+    msg = await ws.read_message()
+    print(msg)
 
 
 if __name__ == '__main__':
-    aio.run(main())
-    
+    IOLoop.current().run_sync(main)

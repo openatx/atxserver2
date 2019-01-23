@@ -108,3 +108,4 @@ run.sh
 run.bat
 .vscode/
 uploads/
+rethinkdb_data/

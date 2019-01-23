@@ -198,6 +198,9 @@ class DBTable(object):
                 result.append(await cursor.next())
             return result
 
+    async def count(self) -> int:
+        return await self._run(self._table.count())
+
     async def delete(self, id):
         return await self._run(self._table.delete(id))
 
