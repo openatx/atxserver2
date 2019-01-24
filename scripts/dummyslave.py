@@ -23,6 +23,14 @@ async def main():
     msg = await ws.read_message()
     print(msg)
 
+    await ws.write_message({
+        "command": "handshake",
+        "name": "aabbcc",
+        "owner": "codeskyblue@gmail.com",
+        "priority": 2})  # priority the large the importanter
+    msg = await ws.read_message()
+    print(msg)
+
 
 if __name__ == '__main__':
     IOLoop.current().run_sync(main)

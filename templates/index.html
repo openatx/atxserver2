@@ -59,10 +59,32 @@
                         return [{
                             udid: "kjnl-dfljsasdklifjdklsfjlasdflsdfk",
                             using: false,
-                            present: false,
+                            present: true,
                             ready: false,
                             private: false,
                             owner: "anonymous@domain.com",
+                            // sources: [
+                            //     {
+                            //         name: "raspberry",
+                            //         address: "10.0.1.123:7712",
+                            //         priority: 2,
+                            //     },
+                            //     {
+                            //         name: "wifi",
+                            //         address: "10.45.16.71:7912",
+                            //         priority: 1,
+                            //     }
+                            // ],
+                            sources: {
+                                raspberry: {
+                                    address: "10.0.1.123:7712",
+                                    priority: 2,
+                                },
+                                wifi: {
+                                    address: "10.45.16.71:7912",
+                                    priority: 1
+                                }
+                            },
                             createdAt: "2018-12-1 12:00:01",
                             lastUsingAt: "2018-12-1 12:00:01",
                             prop_serial: "123123",
