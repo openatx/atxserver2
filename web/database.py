@@ -72,6 +72,10 @@ class DB(object):
             primary_key = tbl.get('primary_key', 'id')
             safe_run(rdb.table_create(table_name, primary_key=primary_key))
 
+        # reset database
+        # safe_run(rdb.table("devices").update({"present": False}))
+        safe_run(rdb.table("devices").replace(lambda q: q.without("sources")))
+
         r.set_loop_type("tornado")
 
     async def connection(self):
@@ -90,7 +94,8 @@ class DB(object):
         Returns
             DBTable
         """
-        return DBTable(self, name)
+        pkey = self.__tables.get(name, {}).get("primary_key")
+        return DBTable(self, name, primary_key=pkey)
 
     def __getattr__(self, name):
         """
@@ -114,8 +119,16 @@ class DBTable(object):
     def _table(self):
         return r.table(self.__table_name)
 
+    @property
+    def reql(self):
+        return r.table(self.__table_name)
+
     def _run(self, rsql):
         return self.__db.run(rsql)
+
+    async def run(self, f):
+        rsql = f(self._table)
+        return await self._run(rsql)
 
     async def update(self, data: dict, id=None):
         """
@@ -157,6 +170,7 @@ class DBTable(object):
         if self.__pkey in data:
             id = data[self.__pkey]
             ret = await self._run(self._table.get(id).update(data))
+            print(ret)
             if not ret['skipped']:
                 ret['id'] = id
                 return ret

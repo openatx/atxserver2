@@ -5,7 +5,7 @@ import asyncio as aio
 import json
 import time
 
-from tornado import websocket
+from tornado import gen, websocket
 from tornado.ioloop import IOLoop
 
 
@@ -25,11 +25,23 @@ async def main():
 
     await ws.write_message({
         "command": "handshake",
-        "name": "aabbcc",
+        "name": "mac",
         "owner": "codeskyblue@gmail.com",
         "priority": 2})  # priority the large the importanter
     msg = await ws.read_message()
     print(msg)
+    await ws.write_message({
+        "command": "update",
+        "data": {
+            "udid": "12435109319fasdfs",
+            "platform": "android",
+            "present": True,
+            "properties": {
+                "serial": "1234567890",
+            }
+        }
+    })
+    await gen.sleep(10)
 
 
 if __name__ == '__main__':
