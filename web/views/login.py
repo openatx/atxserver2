@@ -6,9 +6,11 @@ from logzero import logger
 from .auth import AuthError, OpenIdMixin
 from .base import BaseRequestHandler
 
+from ..settings import AUTH_BACKENDS
+
 
 class OpenIdLoginHandler(BaseRequestHandler, OpenIdMixin):
-    _OPENID_ENDPOINT = 'https://login.netease.com/openid/'
+    _OPENID_ENDPOINT = AUTH_BACKENDS['openid']['endpoint']
 
     async def get(self):
         if self.get_argument("openid.mode", False):

@@ -29,6 +29,7 @@ class DeviceItemHandler(BaseRequestHandler):
 class DeviceListHandler(BaseRequestHandler):
     """ Device List will show in first page """
 
+    @authenticated
     async def get(self):
         """ get data from database """
         if self.get_argument('json', None) is not None:
