@@ -5,6 +5,7 @@ import asyncio as aio
 import json
 import time
 
+from logzero import logger
 from tornado import gen, websocket
 from tornado.ioloop import IOLoop
 
@@ -38,10 +39,17 @@ async def main():
             "present": True,
             "properties": {
                 "serial": "1234567890",
+                "brand": 'Xiaomi',
+                "version": "7.0.1",
             }
         }
     })
-    await gen.sleep(10)
+    await gen.sleep(2)
+    while 1:
+        await ws.write_message({"command": "ping"})
+        msg = await ws.read_message()
+        logger.debug("receive: %s", msg)
+        await gen.sleep(1)
 
 
 if __name__ == '__main__':

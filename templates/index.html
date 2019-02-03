@@ -22,11 +22,13 @@
     <el-table :data="tableData">
         <!-- <el-table-column prop="udid" label="UDID"></el-table-column> -->
         <el-table-column label="Status">
-            <template>Using</template>
+            <template slot-scope="scope">
+                <a href="#" target="_blank" @click.prevent="clickStatus(scope.row)">TODO</a>
+            </template>
         </el-table-column>
         <el-table-column prop="prop_serial" label="Serial"></el-table-column>
-        <el-table-column prop="productBrand" label="Brand"></el-table-column>
-        <el-table-column prop="productVersion" label="Version"></el-table-column>
+        <el-table-column prop="prop_brand" label="Brand"></el-table-column>
+        <el-table-column prop="prop_version" label="Version"></el-table-column>
     </el-table>
 </div>
 {% end %}
@@ -35,15 +37,18 @@
 <script>
     $.getJSON(location.pathname + "?json")
         .then((ret) => {
-            console.log(ret)
             new Vue({
                 el: "#app",
                 data: Object.assign({
                     user: {
                         name: "anonymous",
                         email: "anonymous@atx.com"
-                    }
+                    },
+                    devices: [],
                 }, ret.data),
+                mounted() {
+                    console.log("Mounted:", this.devices)
+                },
                 computed: {
                     tableData() {
                         return this.filteredDevices.map(v => {
@@ -52,10 +57,13 @@
                                     v['prop_' + key] = v.properties[key]
                                 }
                             }
+                            let display = v.display || {}
+                            v['display_size'] = display.width + "x" + display.height;
                             return v;
                         })
                     },
                     filteredDevices() {
+                        return this.devices;
                         return [{
                             udid: "kjnl-dfljsasdklifjdklsfjlasdflsdfk",
                             using: false,
@@ -111,6 +119,9 @@
                     formatTimeUsed() {
                         // let duration = moment(this.finishedAt) - moment(this.createdAt);
                         // return moment.utc(duration).format('HH:mm:ss')
+                    },
+                    clickStatus(device) {
+                        console.log(device.udid)
                     }
                 }
             })

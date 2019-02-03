@@ -3,7 +3,6 @@
 
 import datetime
 import json
-import os
 
 import rethinkdb as r
 from logzero import logger
