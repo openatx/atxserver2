@@ -152,7 +152,7 @@ class DBTable(object):
         if id:
             rsql = rsql.get(id)
         ret = await self._run(rsql.update(data))
-        return not ret
+        return ret
 
     async def save(self, data: dict, id=None):
         """

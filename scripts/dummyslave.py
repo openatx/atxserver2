@@ -34,12 +34,12 @@ async def main():
     await ws.write_message({
         "command": "update",
         "data": {
-            "udid": "12435109319fasdfs",
+            "udid": "abcdefg",
             "platform": "android",
             "present": True,
             "properties": {
-                "serial": "1234567890",
-                "brand": 'Xiaomi',
+                "serial": "xyz234567890",
+                "brand": 'Huawei',
                 "version": "7.0.1",
             }
         }

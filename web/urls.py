@@ -5,7 +5,7 @@ import os
 
 from .views import LogoutHandler, MainHandler
 from .views.device import (DeviceChangesWSHandler, DeviceItemHandler,
-                           DeviceListHandler)
+                           DeviceListHandler, APIUserDeviceHandler)
 from .views.slave import SlaveHeartbeatWSHandler
 from .views.upload import UploadItemHandler, UploadListHandler
 from .views.user import APIUserHandler, UserHandler
@@ -15,7 +15,8 @@ urlpatterns = [
     (r"/user", UserHandler),
     (r"/logout", LogoutHandler),
     (r"/uploads", UploadListHandler),
-    (r"/uploads/(.*)", UploadItemHandler, {'path': os.path.join(os.getcwd(), 'uploads')}),
+    (r"/uploads/(.*)", UploadItemHandler,
+     {'path': os.path.join(os.getcwd(), 'uploads')}),
     (r"/devices", DeviceListHandler),
     (r"/devices/([^/]+)", DeviceItemHandler),
     (r"/websocket/devicechanges", DeviceChangesWSHandler),
@@ -23,6 +24,7 @@ urlpatterns = [
     # (r"/device-control/([^/]+)", Device)
     # RESP API
     (r"/api/v1/user", APIUserHandler),
+    (r"/api/v1/user/devices", APIUserDeviceHandler),
     # GET /api/v1/devices
     # GET /api/v1/devices/{serial}
     # GET /api/v1/user/devices

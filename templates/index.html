@@ -19,11 +19,15 @@
 
 {% block content %}
 <div class="container">
+    <el-alert v-if="websocketDisconnected" title="WebSocket连接断开，F5刷新重连" type="error">
+    </el-alert>
     <el-table :data="tableData">
         <!-- <el-table-column prop="udid" label="UDID"></el-table-column> -->
         <el-table-column label="Status">
             <template slot-scope="scope">
-                <a href="#" target="_blank" @click.prevent="clickStatus(scope.row)">TODO</a>
+                <a href="#" target="_blank" @click.prevent="clickStatus(scope.row)">
+                    {{!deviceStatusName(scope.row)}}
+                </a>
             </template>
         </el-table-column>
         <el-table-column prop="prop_serial" label="Serial"></el-table-column>
@@ -35,11 +39,15 @@
 
 {% block script %}
 <script>
+    var currentUserEmail = "{{ current_user.email }}";
+</script>
+<script>
     $.getJSON(location.pathname + "?json")
         .then((ret) => {
             new Vue({
                 el: "#app",
                 data: Object.assign({
+                    websocketDisconnected: false,
                     user: {
                         name: "anonymous",
                         email: "anonymous@atx.com"
@@ -120,8 +128,70 @@
                         // let duration = moment(this.finishedAt) - moment(this.createdAt);
                         // return moment.utc(duration).format('HH:mm:ss')
                     },
+                    deviceAcquire(udid) {
+                        $.ajax({
+                            method: "post",
+                            url: "/api/v1/user/devices",
+                            data: JSON.stringify({
+                                "udid": udid,
+                            })
+                        })
+                            .then(ret => {
+                                console.log(ret)
+                            })
+                    },
+                    deviceStatusName(device) {
+                        if (!device.present) {
+                            return "Offline"
+                        }
+                        if (!device.using) {
+                            return "Use"
+                        }
+                        if (device.userId == currentUserEmail) {
+                            return "Stop"
+                        }
+                        return "Busy"
+                    },
                     clickStatus(device) {
+                        switch (this.deviceStatusName(device)) {
+                            case "Use":
+                                this.deviceAcquire(device.udid)
+                                break
+                        }
                         console.log(device.udid)
+                    }
+                },
+                mounted() {
+                    let scheme = location.protocol === 'https' ? 'wss' : 'ws';
+                    let wsURL = scheme + "://" + location.host + "/websocket/devicechanges";
+                    let ws = new WebSocket(wsURL);
+                    ws.onopen = (evt) => {
+                        console.log("Websocket Connected")
+                    }
+                    ws.onmessage = (evt) => {
+                        let m = JSON.parse(evt.data);
+                        switch (m.event) {
+                            case "update":
+                                this.devices = this.devices.map((v) => {
+                                    console.log(v.udid)
+                                    if (v.udid == m.data.udid) {
+                                        return m.data
+                                    }
+                                    return v
+                                })
+                                console.log("Updated:", this.devices)
+                                break;
+                            case "insert":
+                                this.devices.unshift(m.data);
+                                break;
+                            default:
+                                console.error("Unknown event type", m.event)
+                                break;
+                        }
+                    }
+                    ws.onclose = (evt) => {
+                        console.log("Websocket closed")
+                        this.websocketDisconnected = true
                     }
                 }
             })

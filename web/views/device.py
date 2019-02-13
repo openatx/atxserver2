@@ -4,11 +4,29 @@
 import json
 
 from logzero import logger
-from tornado.web import authenticated, RequestHandler
+from tornado.web import authenticated
 
 from ..database import db, jsondate_loads, time_now
 from ..utils import jsondate_dumps
 from .base import BaseRequestHandler, BaseWebSocketHandler, AuthRequestHandler
+
+
+class APIUserDeviceHandler(BaseRequestHandler):
+    """ device Acquire and Release """
+    async def post(self):
+        data = self.get_payload()
+        udid = data["udid"]
+        try:
+            await occupy_device(self.current_user.email, udid)
+            self.write_json({
+                "success": True,
+                "description": "Device successfully added"
+            })
+        except OccupyError as e:
+            self.write_json({
+                "success": False,
+                "description": "Device add failed: "+str(e),
+            })
 
 
 class DeviceItemHandler(BaseRequestHandler):
@@ -62,6 +80,7 @@ class DeviceChangesWSHandler(BaseWebSocketHandler):
                 if not self.__opened:
                     break
                 data = await feed.next()
+                logger.info("feed data: %s", data)
                 self.write_json({
                     "event": "insert" if data['old_val'] is None else 'update',
                     "data": data['new_val'],
@@ -86,6 +105,10 @@ class OccupyError(Exception):
 
 
 async def occupy_device(email: str, udid: str):
+    """
+    Raises:
+        OccupyError
+    """
     device = await db.device.get(udid)
     if not device:
         raise OccupyError("device not exist")
