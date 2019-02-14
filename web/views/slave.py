@@ -8,6 +8,7 @@ import uuid
 from tornado.ioloop import IOLoop
 from logzero import logger
 
+import rethinkdb as r
 from ..database import db, time_now
 from .base import BaseRequestHandler, BaseWebSocketHandler
 
@@ -60,6 +61,7 @@ class SlaveHeartbeatWSHandler(BaseWebSocketHandler):
         device_info = req['data']
         source_info = self._info.copy()
         source_info['updatedAt'] = time_now()
+        source_info["deviceAddress"] = req['address']
         device_info["sources"] = {
             self._id: source_info,
         }
@@ -70,8 +72,7 @@ class SlaveHeartbeatWSHandler(BaseWebSocketHandler):
         req = json.loads(message)
         assert 'command' in req
 
-        await getattr(self, "_on_"+req["command"])(req)
-
+        await getattr(self, "_on_" + req["command"])(req)
         """
         {"command": "ping"} // ping, update
         """
@@ -82,13 +83,16 @@ class SlaveHeartbeatWSHandler(BaseWebSocketHandler):
 
         async def remove_source():
             def inner(q):
-                return q.without({
-                    "sources": {
-                        self._id: True
-                    }
-                })
+                return q.without({"sources": {self._id: True}})
 
             await db.run(db.device.reql.replace(inner))
-            # TODO(ssx): update present status
+
+            # set present,using to false if there is on sources
+            filter_rule = r.row["sources"].default({}).keys().count().eq(0)
+            await db.run(
+                db.device.reql.filter(filter_rule).update({
+                    "present": False,
+                    "using": False,
+                }))
 
         IOLoop.current().add_callback(remove_source)

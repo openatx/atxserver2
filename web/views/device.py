@@ -11,8 +11,17 @@ from ..utils import jsondate_dumps
 from .base import BaseRequestHandler, BaseWebSocketHandler, AuthRequestHandler
 
 
+class OccupyError(Exception):
+    pass
+
+
+class ReleaseError(Exception):
+    pass
+
+
 class APIUserDeviceHandler(BaseRequestHandler):
     """ device Acquire and Release """
+
     async def post(self):
         data = self.get_payload()
         udid = data["udid"]
@@ -23,10 +32,32 @@ class APIUserDeviceHandler(BaseRequestHandler):
                 "description": "Device successfully added"
             })
         except OccupyError as e:
+            self.set_status(403)  # forbidden
             self.write_json({
                 "success": False,
-                "description": "Device add failed: "+str(e),
+                "description": "Device add failed: " + str(e),
             })
+
+    async def delete(self, udid: str):
+        try:
+            await release_device(self.current_user.email, udid)
+            self.write_json({
+                "success": True,
+                "description": "Device successfully released"
+            })
+        except ReleaseError as e:
+            self.set_status(403)  # forbidden
+            self.write_json({
+                "success": False,
+                "description": "Device release failed: " + str(e),
+            })
+
+
+class DeviceControlHandler(BaseRequestHandler):
+    """ device remote control """
+
+    async def get(self, udid):
+        self.render("remotecontrol.html")
 
 
 class DeviceItemHandler(BaseRequestHandler):
@@ -34,14 +65,30 @@ class DeviceItemHandler(BaseRequestHandler):
         pass
 
     async def get_json(self, id):
-        data = await db.table("records").get(id)
+        data = await db.table("devices").get(id)
+        if not data:
+            self.set_status(400)  # bad request
+            self.write_json({
+                "success": False,
+                "description": "device not found " + id,
+            })
+            return
+
+        address = None
+        priority = 0
+        for s in data.get('sources', {}).values():
+            if s['priority'] > priority:
+                address = s['deviceAddress']
+                priority = s['priority']
+
+        data['address'] = address
         self.write_json({
             "success": True,
             "data": data,
         })
 
     async def get_html(self, id):
-        self.render("record.html")
+        self.write("No such html")
 
 
 class DeviceListHandler(BaseRequestHandler):
@@ -95,15 +142,6 @@ class DeviceChangesWSHandler(BaseWebSocketHandler):
         print("Websocket closed")
 
 
-class DeviceControlHandler(AuthRequestHandler):
-    def get(self, udid):
-        pass
-
-
-class OccupyError(Exception):
-    pass
-
-
 async def occupy_device(email: str, udid: str):
     """
     Raises:
@@ -125,6 +163,15 @@ async def occupy_device(email: str, udid: str):
         raise OccupyError(
             "not fast enough, device have been taken from others")
     await db.device.update({"userId": email, "usingBebanAt": time_now()}, udid)
+
+
+async def release_device(email: str, udid: str):
+    device = await db.device.get(udid)
+    if not device:
+        raise ReleaseError("device not exist")
+    if device.get('userId') != email:
+        raise ReleaseError("device is not owned by you")
+    await db.device.update({"using": False}, udid)
 
 
 class DeviceBookWSHandler(BaseWebSocketHandler):

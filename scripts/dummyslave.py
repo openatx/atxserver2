@@ -18,7 +18,8 @@ class WebSocket(websocket.WebSocketClientConnection):
 
 
 async def main():
-    ws = await websocket.websocket_connect("ws://localhost:4000/websocket/heartbeat")
+    ws = await websocket.websocket_connect(
+        "ws://localhost:4000/websocket/heartbeat")
     ws.__class__ = WebSocket
     await ws.write_message({"command": "ping"})
     msg = await ws.read_message()
@@ -28,11 +29,13 @@ async def main():
         "command": "handshake",
         "name": "mac",
         "owner": "codeskyblue@gmail.com",
-        "priority": 2})  # priority the large the importanter
+        "priority": 2
+    })  # priority the large the importanter
     msg = await ws.read_message()
     print(msg)
     await ws.write_message({
         "command": "update",
+        "address": "192.168.1.100:7100",
         "data": {
             "udid": "abcdefg",
             "platform": "android",

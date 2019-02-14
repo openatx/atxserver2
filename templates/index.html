@@ -19,13 +19,16 @@
 
 {% block content %}
 <div class="container">
-    <el-alert v-if="websocketDisconnected" title="WebSocket连接断开，F5刷新重连" type="error">
-    </el-alert>
+    <span onclick="location.reload()">
+        <el-alert v-if="websocketDisconnected" title="WebSocket连接断开，点击或F5刷新重连" type="error">
+        </el-alert>
+    </span>
     <el-table :data="tableData">
         <!-- <el-table-column prop="udid" label="UDID"></el-table-column> -->
         <el-table-column label="Status">
             <template slot-scope="scope">
-                <a href="#" target="_blank" @click.prevent="clickStatus(scope.row)">
+                <a :href='"/devices/"+scope.row.udid+"/remotecontrol"' target="_blank"
+                    @click="clickStatus($event, scope.row)">
                     {{!deviceStatusName(scope.row)}}
                 </a>
             </template>
@@ -129,12 +132,23 @@
                         // return moment.utc(duration).format('HH:mm:ss')
                     },
                     deviceAcquire(udid) {
-                        $.ajax({
+                        return $.ajax({
                             method: "post",
                             url: "/api/v1/user/devices",
                             data: JSON.stringify({
                                 "udid": udid,
+                            }),
+                            dataType: "json",
+                        })
+                            .done(ret => {
+                                console.log(ret)
                             })
+                    },
+                    deviceRelease(udid) {
+                        $.ajax({
+                            method: "delete",
+                            url: "/api/v1/user/devices/" + udid,
+                            dataType: "json",
                         })
                             .then(ret => {
                                 console.log(ret)
@@ -152,11 +166,22 @@
                         }
                         return "Busy"
                     },
-                    clickStatus(device) {
-                        switch (this.deviceStatusName(device)) {
+                    clickStatus(event, device) {
+                        let status = this.deviceStatusName(device)
+                        console.log("Status", status)
+                        switch (status) {
                             case "Use":
                                 this.deviceAcquire(device.udid)
+                                    .fail(ret => {
+                                        event.preventDefault()
+                                    })
                                 break
+                            case "Stop":
+                                this.deviceRelease(device.udid);
+                                event.preventDefault()
+                                return true
+                            default:
+                                event.preventDefault()
                         }
                         console.log(device.udid)
                     }
