@@ -67,6 +67,10 @@ class BaseRequestHandler(CurrentUserMixin, tornado.web.RequestHandler):
     def get_payload(self):
         return json_decode(self.request.body)
 
+    @property
+    def is_json_request(self):
+        return self.get_argument('json', None) is not None
+
     async def get(self, *args):
         if self.get_argument('json', None) is not None:
             await self.get_json(*args)
@@ -82,6 +86,7 @@ class BaseRequestHandler(CurrentUserMixin, tornado.web.RequestHandler):
 
 class AuthRequestHandler(BaseRequestHandler):
     """ request user logged in before http request """
+
     async def prepare(self):
         await super().prepare()
         authenticated(lambda x: None)(self)

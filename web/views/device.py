@@ -22,7 +22,17 @@ class ReleaseError(Exception):
 class APIUserDeviceHandler(BaseRequestHandler):
     """ device Acquire and Release """
 
+    async def get(self):
+        """ get user current using devices """
+        data = await db.device.get_all(
+            rsql_hook=lambda q: q.filter({"userId": self.current_user.email}))
+        self.write_json({
+            "success": True,
+            "devices": data,
+        })
+
     async def post(self):
+        """ acquire device """
         data = self.get_payload()
         udid = data["udid"]
         try:
@@ -39,6 +49,7 @@ class APIUserDeviceHandler(BaseRequestHandler):
             })
 
     async def delete(self, udid: str):
+        """ release device """
         try:
             await release_device(self.current_user.email, udid)
             self.write_json({
@@ -57,7 +68,7 @@ class DeviceControlHandler(BaseRequestHandler):
     """ device remote control """
 
     async def get(self, udid):
-        self.render("remotecontrol.html")
+        self.render("remotecontrol.html", udid=udid)
 
 
 class DeviceItemHandler(BaseRequestHandler):
@@ -97,7 +108,7 @@ class DeviceListHandler(BaseRequestHandler):
     @authenticated
     async def get(self):
         """ get data from database """
-        if self.get_argument('json', None) is not None:
+        if self.is_json_request or self.request.path == "/list":
             self.write_json({
                 "success": True,
                 "data": {
@@ -171,7 +182,7 @@ async def release_device(email: str, udid: str):
         raise ReleaseError("device not exist")
     if device.get('userId') != email:
         raise ReleaseError("device is not owned by you")
-    await db.device.update({"using": False}, udid)
+    await db.device.update({"using": False, "userId": None}, udid)
 
 
 class DeviceBookWSHandler(BaseWebSocketHandler):

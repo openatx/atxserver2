@@ -27,10 +27,15 @@
         <!-- <el-table-column prop="udid" label="UDID"></el-table-column> -->
         <el-table-column label="Status">
             <template slot-scope="scope">
-                <a :href='"/devices/"+scope.row.udid+"/remotecontrol"' target="_blank"
-                    @click="clickStatus($event, scope.row)">
-                    {{!deviceStatusName(scope.row)}}
-                </a>
+                <template v-if="!scope.row.present">
+                    <span style="color: gray">Offline</span>
+                </template>
+                <template v-else>
+                    <a :href='"/devices/"+scope.row.udid+"/remotecontrol"' target="_blank"
+                        @click="clickStatus($event, scope.row)">
+                        {{!deviceStatusName(scope.row)}}
+                    </a>
+                </template>
             </template>
         </el-table-column>
         <el-table-column prop="prop_serial" label="Serial"></el-table-column>

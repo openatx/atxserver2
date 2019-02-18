@@ -22,7 +22,7 @@
 </head>
 
 <body>
-    <div id="app">
+    <div>
         {% block nav %}
         <nav class="navbar sticky-top navbar-expand-lg navbar-dark bg-dark">
             <div class="container">
@@ -42,8 +42,8 @@
                     </div>
                     <div class="navbar-nav navbar-right ml-auto">
                         <div class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownMenuLink" data-toggle="dropdown"
-                                aria-haspopup="true" aria-expanded="false">
+                            <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownMenuLink"
+                                data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                                 {{current_user.email}}
                             </a>
                             <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
@@ -61,7 +61,9 @@
             </div>
         </nav>
         {% end %}
-        {% block content %}{% end %}
+        <div id="app">
+            {% block content %}{% end %}
+        </div>
     </div>
 
     {% block script %}

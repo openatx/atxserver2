@@ -35,14 +35,14 @@ async def main():
     print(msg)
     await ws.write_message({
         "command": "update",
-        "address": "192.168.1.100:7100",
+        "address": "10.242.88.46:7912",
         "data": {
-            "udid": "abcdefg",
+            "udid": "1plus",
             "platform": "android",
             "present": True,
             "properties": {
-                "serial": "xyz234567890",
-                "brand": 'Huawei',
+                "serial": "11471d3e",
+                "brand": 'One',
                 "version": "7.0.1",
             }
         }

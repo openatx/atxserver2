@@ -23,6 +23,8 @@ urlpatterns = [
     (r"/websocket/devicechanges", DeviceChangesWSHandler),
     (r"/websocket/heartbeat", SlaveHeartbeatWSHandler),
     # (r"/device-control/([^/]+)", Device)
+    # For compability of atx-server1
+    (r"/list", DeviceListHandler),
     # RESP API
     (r"/api/v1/user", APIUserHandler),
     (r"/api/v1/user/devices", APIUserDeviceHandler),

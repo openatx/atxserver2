@@ -13,14 +13,250 @@
     .color-wrong {
         color: red;
     }
+
+    .debugarea {
+        background-color: #ddd;
+        border: 1px solid red;
+    }
+
+    session.screen {
+        position: relative;
+    }
+
+    .canvas-fg {
+        z-index: 20;
+        position: absolute;
+    }
+
+    .canvas-bg {
+        z-index: 10;
+    }
 </style>
 {% end %}
 
+{% block nav %}
+<nav class="navbar sticky-top navbar-expand-lg navbar-dark bg-dark">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="/">
+            <span class="title">ATXServer2</span></a>
+        </a>
+        <div class="collapse navbar-collapse" id="navbarNavDropdown">
+            <div class="navbar-nav">
+                <a class="nav-item nav-link active" href="/">
+                    <i class="fas fa-list-alt"></i> 设备控制</a>
+                <a class="nav-item nav-link" href="/devices">
+                    设备列表</a>
+                <a class="nav-item nav-link" href="/uploads">
+                    文件上传</a>
+                <!-- <a class="nav-item nav-link active" href='/'> -->
+                <!-- </a> -->
+            </div>
+            <div class="navbar-nav navbar-right ml-auto">
+                <div class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownMenuLink" data-toggle="dropdown"
+                        aria-haspopup="true" aria-expanded="false">
+                        {{current_user.email}}
+                    </a>
+                    <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
+                        <a class="dropdown-item" href="/user">用户信息</a>
+                        <a class="dropdown-item" href="/logout">Logout</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNavDropdown"
+            aria-controls="navbarNavDropdown" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+    </div>
+</nav>
+{% end %}
+
 {% block content %}
-<div class="container">
+<div class="container-fluid">
     Remote control
+    {{!udid}}
+    <a :href="remoteTerminal">Remote Terminal</a>
+    <a :href="screenshotUrl">Screenshot</a>
+    <div class="row">
+        <div class="col-sm debugarea">
+            Screen
+            <section class="screen">
+                <canvas ref="fgCanvas" class="canvas-fg" v-bind:style="canvasStyle"></canvas>
+                <canvas ref="bgCanvas" class="canvas-bg" v-bind:style="canvasStyle"></canvas>
+                <span class="finger finger-0" style="transform: translate3d(200px, 100px, 0px)"></span>
+                <span class="finger finger-1" style="transform: translate3d(200px, 100px, 0px)"></span>
+                <!-- <img style="z-index: 10" v-if="loading" src="/assets/loading.svg"> -->
+            </section>
+            <section class="footer">
+                <button class="btn btn-default" @click="runShell('input keyevent HOME')">HOME</button>
+            </section>
+        </div>
+        <div class="col-sm debugarea">
+            Panels
+        </div>
+    </div>
+
+
 </div>
 {% end %}
 
 {% block script %}
+<script src="{{static_url('javascripts/imagepool.js')}}"></script>
+<script>
+    let udid = "{{udid}}"
+    let userEmail = "{{current_user.email}}"
+
+    function closeWindowWhenReleased() {
+        var refreshKey = setInterval(function () {
+            $.getJSON("/devices/" + udid + "?json")
+                .done(function (ret) {
+                    console.log(ret.data.userId)
+                    if (ret.data.userId !== userEmail) {
+                        window.close()
+                    }
+                })
+                .fail(function (ret) {
+                    alert("Fail" + ret)
+                    clearInterval(refreshKey)
+                })
+        }, 2000)
+    }
+
+    $.getJSON("/devices/" + udid + "?json")
+        .then(ret => {
+
+            closeWindowWhenReleased()
+
+            new Vue({
+                el: "#app",
+                data: Object.assign({
+                    canvas: {
+                        bg: null,
+                        fg: null,
+                    },
+                    canvasStyle: {
+                        opacity: 1,
+                        width: 'inherit',
+                        height: 'inherit'
+                    },
+                    lastScreenSize: {
+                        screen: {},
+                        canvas: {
+                            width: 1,
+                            height: 1
+                        }
+                    },
+                    screenWS: null,
+                    imagePool: new ImagePool(100),
+                }, ret.data),
+                methods: {
+                    runShell(command) {
+                        $.ajax({
+                            method: "get",
+                            url: this.deviceUrl + "/shell",
+                            data: {
+                                "command": command,
+                            },
+                            dataType: "json"
+                        }).then((ret) => {
+                            console.log(ret)
+                        })
+                    },
+                    mirrorDisplay() {
+                        var ws = new WebSocket(this.deviceUrl.replace(/^http/, "ws") + '/minicap');
+                        ws.onopen = (ev) => {
+                            console.log('screen websocket connected')
+                        };
+                        ws.onmessage = (message) => {
+                            if (message.data instanceof Blob) {
+                                this.drawBlobImageToCanvas(message.data, this.canvas.bg)
+                            } else if (/^ data size: /.test(message.data)) {
+                                console.log("receive message:", message.data)
+                            } else if (/^rotation/.test(message.data)) {
+                                self.rotation = parseInt(message.data.substr('rotation '.length), 10);
+                                console.log(self.rotation)
+                            } else {
+                                console.log("receive message:", message.data)
+                            }
+                        }
+                        ws.onclose = function (ev) {
+                            console.log("screen websocket closed", ev.code)
+                        }.bind(this)
+
+                        ws.onerror = function (ev) {
+                            console.log("screen websocket error")
+                        }
+                    },
+                    drawBlobImageToCanvas(blob, canvas) {
+                        // Support jQuery Promise
+                        var dtd = $.Deferred();
+                        var ctx = canvas.getContext('2d'),
+                            URL = window.URL || window.webkitURL,
+                            BLANK_IMG = 'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==',
+                            img = this.imagePool.next();
+
+                        img.onload = () => {
+                            canvas.width = img.width
+                            canvas.height = img.height
+
+                            ctx.drawImage(img, 0, 0, img.width, img.height);
+                            // self.resizeScreen(img);
+
+                            // Try to forcefully clean everything to get rid of memory
+                            // leaks. Note self despite this effort, Chrome will still
+                            // leak huge amounts of memory when the developer tools are
+                            // open, probably to save the resources for inspection. When
+                            // the developer tools are closed no memory is leaked.
+                            img.onload = img.onerror = null
+                            img.src = BLANK_IMG
+                            img = null
+                            blob = null
+
+                            URL.revokeObjectURL(url)
+                            url = null
+                            dtd.resolve();
+                        }
+
+                        img.onerror = function () {
+                            // Happily ignore. I suppose this shouldn't happen, but
+                            // sometimes it does, presumably when we're loading images
+                            // too quickly.
+
+                            // Do the same cleanup here as in onload.
+                            img.onload = img.onerror = null
+                            img.src = BLANK_IMG
+                            img = null
+                            blob = null
+
+                            URL.revokeObjectURL(url)
+                            url = null
+                            dtd.reject();
+                        }
+                        var url = URL.createObjectURL(blob)
+                        img.src = url;
+                        return dtd;
+                    },
+                },
+                mounted: function () {
+                    this.canvas.bg = this.$refs.bgCanvas
+                    this.canvas.fg = this.$refs.fgCanvas
+                    let ctx = this.canvas.bg.getContext('2d');
+                    this.mirrorDisplay()
+                },
+                computed: {
+                    deviceUrl() {
+                        return "http://" + this.address
+                    },
+                    remoteTerminal() {
+                        return "http://" + this.address + "/term"
+                    },
+                    screenshotUrl() {
+                        return "http://" + this.address + "/screenshot"
+                    }
+                }
+            })
+        })
+</script>
 {% end %}
