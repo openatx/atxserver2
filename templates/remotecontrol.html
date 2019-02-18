@@ -109,17 +109,19 @@
     let userEmail = "{{current_user.email}}"
 
     function closeWindowWhenReleased() {
-        var refreshKey = setInterval(function () {
+        setTimeout(function () {
             $.getJSON("/devices/" + udid + "?json")
                 .done(function (ret) {
                     console.log(ret.data.userId)
                     if (ret.data.userId !== userEmail) {
                         window.close()
                     }
+                    closeWindowWhenReleased()
                 })
                 .fail(function (ret) {
-                    alert("Fail" + ret)
-                    clearInterval(refreshKey)
+                    console.log(ret)
+                    alert("Fail connect to server")
+                    // closeWindowWhenReleased()
                 })
         }, 2000)
     }
@@ -181,9 +183,15 @@
                                 console.log("receive message:", message.data)
                             }
                         }
-                        ws.onclose = function (ev) {
+                        ws.onclose = (ev) => {
                             console.log("screen websocket closed", ev.code)
-                        }.bind(this)
+                            this.$message({
+                                showClose: true,
+                                message: '设备屏幕同步中断',
+                                type: 'error',
+                                duration: 0,
+                            });
+                        }
 
                         ws.onerror = function (ev) {
                             console.log("screen websocket error")

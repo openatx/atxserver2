@@ -30,18 +30,18 @@ class CurrentUserMixin(object):
         # print("ID:", id)
         if id:
             id = id.decode()
-        return self.bunchify(await db.user.get(id) if id else None)
+        return self.bunchify(await db.users.get(id) if id else None)
 
     async def set_current_user(self, email: str, username: str):
-        ret = await db.user.save({"email": email, "username": username})
+        ret = await db.users.save({"email": email, "username": username})
         if ret['inserted']:
-            await db.user.save({
+            await db.users.save({
                 "secretKey": "S:" + str(uuid.uuid4()),
                 "createdAt": time_now(),
                 "lastLoggedInAt": time_now(),
             }, ret['id'])
         elif ret['unchanged']:
-            await db.user.save({
+            await db.users.save({
                 "lastLoggedInAt": time_now(),
             }, ret['id'])
 

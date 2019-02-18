@@ -24,7 +24,7 @@ class APIUserDeviceHandler(BaseRequestHandler):
 
     async def get(self):
         """ get user current using devices """
-        data = await db.device.get_all(
+        data = await db.devices.get_all(
             rsql_hook=lambda q: q.filter({"userId": self.current_user.email}))
         self.write_json({
             "success": True,
@@ -68,6 +68,16 @@ class DeviceControlHandler(BaseRequestHandler):
     """ device remote control """
 
     async def get(self, udid):
+        device = await db.table("devices").get(udid)
+        if not device:
+            self.render("error.html", message="404 Device not found")
+            return
+        if not device['present']:
+            self.render("error.html", message="Device is offline")
+            return
+        if device.get('userId') != self.current_user.email:
+            self.render("error.html", message="Device is not owned by you!")
+            return
         self.render("remotecontrol.html", udid=udid)
 
 
@@ -158,7 +168,7 @@ async def occupy_device(email: str, udid: str):
     Raises:
         OccupyError
     """
-    device = await db.device.get(udid)
+    device = await db.devices.get(udid)
     if not device:
         raise OccupyError("device not exist")
     if not device.get('present'):
@@ -169,20 +179,23 @@ async def occupy_device(email: str, udid: str):
             return
         raise OccupyError("device busy")
 
-    ret = await db.device.update({"using": True}, udid)
+    ret = await db.devices.update({"using": True}, udid)
     if ret['skipped'] == 1:
         raise OccupyError(
             "not fast enough, device have been taken from others")
-    await db.device.update({"userId": email, "usingBebanAt": time_now()}, udid)
+    await db.devices.update({
+        "userId": email,
+        "usingBebanAt": time_now()
+    }, udid)
 
 
 async def release_device(email: str, udid: str):
-    device = await db.device.get(udid)
+    device = await db.devices.get(udid)
     if not device:
         raise ReleaseError("device not exist")
     if device.get('userId') != email:
         raise ReleaseError("device is not owned by you")
-    await db.device.update({"using": False, "userId": None}, udid)
+    await db.devices.update({"using": False, "userId": None}, udid)
 
 
 class DeviceBookWSHandler(BaseWebSocketHandler):

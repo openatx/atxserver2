@@ -33,11 +33,11 @@ def jsondate_loads(s):
 
 class DB(object):
     __tables = {
-        "device": {
+        "devices": {
             "name": "devices",
             "primary_key": "udid",
         },
-        "user": {
+        "users": {
             "name": "users",
             "primary_key": "email",
         }
@@ -72,7 +72,7 @@ class DB(object):
             safe_run(rdb.table_create(table_name, primary_key=primary_key))
 
         # reset database
-        # safe_run(rdb.table("devices").update({"present": False}))
+        safe_run(rdb.table("devices").update({"present": False}))
         safe_run(rdb.table("devices").replace(lambda q: q.without("sources")))
 
         r.set_loop_type("tornado")
@@ -100,7 +100,7 @@ class DB(object):
         """
         use this magic function, it is possible to write code like this
 
-            user = await db.user.get("codeskyblue@gmail.com")
+            user = await db.users.get("codeskyblue@gmail.com")
         """
         if name not in self.__tables:
             raise AttributeError("database table not exist", name)
