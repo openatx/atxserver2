@@ -5,6 +5,30 @@
 
 {% block style %}
 <style>
+    html,
+    body,
+    body>div {
+        height: 100%;
+    }
+
+    body>div {
+        display: flex;
+        flex-direction: column;
+    }
+
+    #app {
+        display: flex;
+        flex-grow: 1;
+    }
+
+    .height100 {
+        height: 100%;
+    }
+
+    .fgrow {
+        flex-grow: 1;
+    }
+
     .color-right {
         background-color: yellowgreen;
         color: white;
@@ -74,22 +98,24 @@
 {% end %}
 
 {% block content %}
-<div class="container-fluid">
-    Remote control
-    {{!udid}}
-    <a :href="remoteTerminal">Remote Terminal</a>
-    <a :href="screenshotUrl">Screenshot</a>
-    <div class="row">
-        <div class="col-sm debugarea">
-            Screen
-            <section class="screen">
+<div class="container-fluid d-flex flex-column">
+    <div>
+        Remote control
+        {{!udid}}
+        <a :href="remoteTerminal">Remote Terminal</a>
+        <a :href="screenshotUrl">Screenshot</a>
+    </div>
+    <div class="row fgrow">
+        <div class="col-sm debugarea d-flex flex-column justify-content-center fgrow">
+            <div class="debugarea" style="height: 2em; justify-self: start">Screen header</div>
+            <section class="screen debugarea grow-1">
                 <canvas ref="fgCanvas" class="canvas-fg" v-bind:style="canvasStyle"></canvas>
                 <canvas ref="bgCanvas" class="canvas-bg" v-bind:style="canvasStyle"></canvas>
                 <span class="finger finger-0" style="transform: translate3d(200px, 100px, 0px)"></span>
                 <span class="finger finger-1" style="transform: translate3d(200px, 100px, 0px)"></span>
                 <!-- <img style="z-index: 10" v-if="loading" src="/assets/loading.svg"> -->
             </section>
-            <section class="footer">
+            <section class="footer debugarea">
                 <button class="btn btn-default" @click="runShell('input keyevent HOME')">HOME</button>
             </section>
         </div>
@@ -140,8 +166,8 @@
                     },
                     canvasStyle: {
                         opacity: 1,
-                        width: 'inherit',
-                        height: 'inherit'
+                        width: '400px',
+                        height: '200px'
                     },
                     lastScreenSize: {
                         screen: {},

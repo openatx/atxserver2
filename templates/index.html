@@ -136,7 +136,7 @@
                         // let duration = moment(this.finishedAt) - moment(this.createdAt);
                         // return moment.utc(duration).format('HH:mm:ss')
                     },
-                    deviceAcquire(udid) {
+                    deviceAcquire(udid) { // for multi device acquire
                         return $.ajax({
                             method: "post",
                             url: "/api/v1/user/devices",
@@ -176,11 +176,7 @@
                         console.log("Status", status)
                         switch (status) {
                             case "Use":
-                                this.deviceAcquire(device.udid)
-                                    .fail(ret => {
-                                        event.preventDefault()
-                                    })
-                                break
+                                return true;
                             case "Stop":
                                 this.deviceRelease(device.udid);
                                 event.preventDefault()

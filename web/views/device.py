@@ -75,8 +75,19 @@ class DeviceControlHandler(BaseRequestHandler):
         if not device['present']:
             self.render("error.html", message="Device is offline")
             return
+        if not device.get("using"):
+            try:
+                await occupy_device(self.current_user.email, udid)
+                self.render("remotecontrol.html", udid=udid)
+            except OccupyError as e:
+                self.render("error.html", message=str(e))
+            finally:
+                return
         if device.get('userId') != self.current_user.email:
-            self.render("error.html", message="Device is not owned by you!")
+            self.render(
+                "error.html",
+                message="Device is not owned by you!, owner is {}".format(
+                    device.get('userId')))
             return
         self.render("remotecontrol.html", udid=udid)
 

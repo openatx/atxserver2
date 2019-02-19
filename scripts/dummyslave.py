@@ -18,6 +18,16 @@ class WebSocket(websocket.WebSocketClientConnection):
 
 
 async def main():
+    while True:
+        try:
+            await run_provider()
+        except TypeError:
+            pass
+        finally:
+            time.sleep(3)
+
+
+async def run_provider():
     ws = await websocket.websocket_connect(
         "ws://localhost:4000/websocket/heartbeat")
     ws.__class__ = WebSocket
