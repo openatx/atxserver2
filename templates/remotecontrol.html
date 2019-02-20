@@ -11,7 +11,7 @@
         height: 100%;
     }
 
-    body>div {
+    #content-wrapper {
         display: flex;
         flex-direction: column;
     }
@@ -25,8 +25,16 @@
         height: 100%;
     }
 
-    .fgrow {
+    .grow-0 {
+        flex-grow: 0;
+    }
+
+    .grow-1 {
         flex-grow: 1;
+    }
+
+    .nopadding {
+        padding: 0px;
     }
 
     .color-right {
@@ -105,17 +113,21 @@
         <a :href="remoteTerminal">Remote Terminal</a>
         <a :href="screenshotUrl">Screenshot</a>
     </div>
-    <div class="row fgrow">
-        <div class="col-sm debugarea d-flex flex-column justify-content-center fgrow">
-            <div class="debugarea" style="height: 2em; justify-self: start">Screen header</div>
-            <section class="screen debugarea grow-1">
+    <div class="row grow-1">
+        <div class="col-sm debugarea d-flex flex-column justify-content-center nopadding grow-0">
+            <section class="debugarea" style="height: 2em; line-height: 2em; justify-self: start">
+                Screen header
+            </section>
+            <section class="screen debugarea" style="line-height: 0px">
                 <canvas ref="fgCanvas" class="canvas-fg" v-bind:style="canvasStyle"></canvas>
                 <canvas ref="bgCanvas" class="canvas-bg" v-bind:style="canvasStyle"></canvas>
                 <span class="finger finger-0" style="transform: translate3d(200px, 100px, 0px)"></span>
                 <span class="finger finger-1" style="transform: translate3d(200px, 100px, 0px)"></span>
                 <!-- <img style="z-index: 10" v-if="loading" src="/assets/loading.svg"> -->
             </section>
-            <section class="footer debugarea">
+            <section class="footer d-flex justify-content-around debugarea">
+                <button class="btn btn-default" @click="runShell('input keyevent HOME')">HOME</button>
+                <button class="btn btn-default" @click="runShell('input keyevent HOME')">HOME</button>
                 <button class="btn btn-default" @click="runShell('input keyevent HOME')">HOME</button>
             </section>
         </div>
@@ -278,6 +290,9 @@
                     this.canvas.fg = this.$refs.fgCanvas
                     let ctx = this.canvas.bg.getContext('2d');
                     this.mirrorDisplay()
+                    this.$message({
+                        message: "hi"
+                    })
                 },
                 computed: {
                     deviceUrl() {
