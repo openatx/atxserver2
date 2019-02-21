@@ -38,7 +38,17 @@
                 </template>
             </template>
         </el-table-column>
-        <el-table-column prop="prop_serial" label="Serial"></el-table-column>
+        <el-table-column prop="prop_serial" label="Serial">
+            <template slot-scope="scope">
+                <template v-if="scope.row.using && scope.row.userId == user.email">
+                    <a :href='"/devices/"+scope.row.udid+"/remotecontrol"'
+                        target="_blank">{{!scope.row.prop_serial}}</a>
+                </template>
+                <template v-else>
+                    {{!scope.row.prop_serial}}
+                </template>
+            </template>
+        </el-table-column>
         <el-table-column prop="prop_brand" label="Brand"></el-table-column>
         <el-table-column prop="prop_version" label="Version"></el-table-column>
     </el-table>
@@ -47,7 +57,8 @@
 
 {% block script %}
 <script>
-    var currentUserEmail = "{{ current_user.email }}";
+    const currentUserEmail = "{{ current_user.email }}";
+    const currentUserName = "{{ current_user.username }}"
 </script>
 <script>
     $.getJSON(location.pathname + "?json")
@@ -57,8 +68,8 @@
                 data: Object.assign({
                     websocketDisconnected: false,
                     user: {
-                        name: "anonymous",
-                        email: "anonymous@atx.com"
+                        name: currentUserName,
+                        email: currentUserEmail,
                     },
                     devices: [],
                 }, ret.data),
