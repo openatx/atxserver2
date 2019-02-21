@@ -9,7 +9,7 @@ from tornado import gen, websocket
 from tornado.ioloop import IOLoop
 
 
-class WebSocket(websocket.WebSocketClientConnection):
+class SafeWebSocket(websocket.WebSocketClientConnection):
     async def write_message(self, message, binary=False):
         if isinstance(message, dict):
             message = json.dumps(message)
@@ -30,10 +30,10 @@ async def main():
 async def run_provider():
     ws = await websocket.websocket_connect(
         "ws://localhost:4000/websocket/heartbeat")
-    ws.__class__ = WebSocket
+    ws.__class__ = SafeWebSocket
     await ws.write_message({"command": "ping"})
     msg = await ws.read_message()
-    print(msg)
+    logger.info("read %s", msg)
 
     is_private = True
 

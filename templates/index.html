@@ -40,7 +40,7 @@
         </el-table-column>
         <el-table-column prop="prop_serial" label="Serial">
             <template slot-scope="scope">
-                <template v-if="scope.row.using && scope.row.userId == user.email">
+                <template v-if="scope.row.present && scope.row.using && scope.row.userId == user.email">
                     <a :href='"/devices/"+scope.row.udid+"/remotecontrol"'
                         target="_blank">{{!scope.row.prop_serial}}</a>
                 </template>
