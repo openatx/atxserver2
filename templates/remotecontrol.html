@@ -115,24 +115,30 @@
     </div>
     <div class="row grow-1">
         <div class="col-sm debugarea d-flex flex-column justify-content-center nopadding grow-0">
-            <section class="debugarea" style="height: 2em; line-height: 2em; justify-self: start">
-                Screen header
+            <section class="debugarea" style="height: 2rem; line-height: 2rem; justify-self: start">
+                {{!udid}}
             </section>
-            <section class="screen debugarea" style="line-height: 0px">
-                <canvas ref="fgCanvas" class="canvas-fg" v-bind:style="canvasStyle"></canvas>
+            <section class="screen debugarea d-flex grow-1 align-items-center justify-content-center"
+                style="line-height: 0px">
+                <!-- <canvas ref="fgCanvas" class="canvas-fg" v-bind:style="canvasStyle"></canvas> -->
                 <canvas ref="bgCanvas" class="canvas-bg" v-bind:style="canvasStyle"></canvas>
                 <span class="finger finger-0" style="transform: translate3d(200px, 100px, 0px)"></span>
                 <span class="finger finger-1" style="transform: translate3d(200px, 100px, 0px)"></span>
                 <!-- <img style="z-index: 10" v-if="loading" src="/assets/loading.svg"> -->
             </section>
             <section class="footer d-flex justify-content-around debugarea">
+                <button class="btn btn-default" @click="runShell('input keyevent BACK')">BACK</button>
                 <button class="btn btn-default" @click="runShell('input keyevent HOME')">HOME</button>
-                <button class="btn btn-default" @click="runShell('input keyevent HOME')">HOME</button>
-                <button class="btn btn-default" @click="runShell('input keyevent HOME')">HOME</button>
+                <button class="btn btn-default" @click="runShell('input keyevent MENU')">MENU</button>
             </section>
         </div>
         <div class="col-sm debugarea">
-            Panels
+            <el-tabs v-model="activeName">
+                <el-tab-pane label="用户管理" name="first">用户管理</el-tab-pane>
+                <el-tab-pane label="配置管理" name="second">配置管理</el-tab-pane>
+                <el-tab-pane label="角色管理" name="third">角色管理</el-tab-pane>
+                <el-tab-pane label="定时任务补偿" name="fourth">定时任务补偿</el-tab-pane>
+            </el-tabs>
         </div>
     </div>
 
@@ -172,6 +178,7 @@
             new Vue({
                 el: "#app",
                 data: Object.assign({
+                    activeName: 'second',
                     canvas: {
                         bg: null,
                         fg: null,
@@ -181,14 +188,14 @@
                         width: '400px',
                         height: '200px'
                     },
-                    lastScreenSize: {
-                        screen: {},
-                        canvas: {
-                            width: 1,
-                            height: 1
-                        }
-                    },
-                    screenWS: null,
+                    // lastScreenSize: {
+                    //     screen: {},
+                    //     canvas: {
+                    //         width: 1,
+                    //         height: 1
+                    //     }
+                    // },
+                    // screenWS: null,
                     imagePool: new ImagePool(100),
                 }, ret.data),
                 methods: {
@@ -246,6 +253,9 @@
                         img.onload = () => {
                             canvas.width = img.width
                             canvas.height = img.height
+
+                            this.canvasStyle.height = canvas.parentElement.clientHeight + "px"
+                            this.canvasStyle.width = "auto"
 
                             ctx.drawImage(img, 0, 0, img.width, img.height);
                             // self.resizeScreen(img);
