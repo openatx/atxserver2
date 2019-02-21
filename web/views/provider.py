@@ -13,7 +13,7 @@ from ..database import db, time_now
 from .base import BaseRequestHandler, BaseWebSocketHandler
 
 
-class SlaveHeartbeatWSHandler(BaseWebSocketHandler):
+class ProviderHeartbeatWSHandler(BaseWebSocketHandler):
     """ monitor device online or offline """
 
     def initialize(self):

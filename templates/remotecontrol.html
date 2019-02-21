@@ -4,6 +4,8 @@
 
 
 {% block style %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@2.9.2/dist/xterm.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@2.9.2/dist/addons/fullscreen/fullscreen.min.css">
 <style>
     html,
     body,
@@ -47,7 +49,7 @@
     }
 
     .debugarea {
-        background-color: #ddd;
+        /* background-color: #ddd; */
         border: 1px solid red;
     }
 
@@ -62,6 +64,13 @@
 
     .canvas-bg {
         z-index: 10;
+    }
+
+    .xterm-wrapper {
+        line-height: 1.2;
+        font-size: 12px;
+        font-family: 'Courier New', Courier, monospace;
+        height: 30em;
     }
 </style>
 {% end %}
@@ -118,8 +127,7 @@
             <section class="debugarea" style="height: 2rem; line-height: 2rem; justify-self: start">
                 {{!udid}}
             </section>
-            <section class="screen debugarea d-flex grow-1 align-items-center justify-content-center"
-                style="line-height: 0px">
+            <section class="screen debugarea d-flex grow-1 align-items-center justify-content-center" style="line-height: 0px">
                 <!-- <canvas ref="fgCanvas" class="canvas-fg" v-bind:style="canvasStyle"></canvas> -->
                 <canvas ref="bgCanvas" class="canvas-bg" v-bind:style="canvasStyle"></canvas>
                 <span class="finger finger-0" style="transform: translate3d(200px, 100px, 0px)"></span>
@@ -134,8 +142,18 @@
         </div>
         <div class="col-sm debugarea">
             <el-tabs v-model="activeName">
-                <el-tab-pane label="用户管理" name="first">用户管理</el-tab-pane>
-                <el-tab-pane label="配置管理" name="second">配置管理</el-tab-pane>
+                <el-tab-pane label="Terminal" name="terminal">
+                    <div>
+                        <p>
+                            查看IP地址: <code>ifconfig | grep Mask</code>
+                            <br>
+                            <code>Ctrl+Ins</code>复制，<code>Shift+Ins</code>粘贴
+                        </p>
+                        其他资料 <a href="https://github.com/mzlogin/awesome-adb">awesome-adb</a>
+                    </div>
+                    <div ref="xterm" class="xterm-wrapper"></div>
+                </el-tab-pane>
+                <el-tab-pane label="安装管理" name="second">配置管理</el-tab-pane>
                 <el-tab-pane label="角色管理" name="third">角色管理</el-tab-pane>
                 <el-tab-pane label="定时任务补偿" name="fourth">定时任务补偿</el-tab-pane>
             </el-tabs>
@@ -147,6 +165,9 @@
 {% end %}
 
 {% block script %}
+<script src="https://cdn.jsdelivr.net/npm/xterm@2.9.2/dist/xterm.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xterm@2.9.2/dist/addons/fit/fit.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/cos-jquery-resize@1.1.0/jquery.ba-resize.min.js"></script>
 <script src="{{static_url('javascripts/imagepool.js')}}"></script>
 <script>
     let udid = "{{udid}}"
@@ -178,7 +199,7 @@
             new Vue({
                 el: "#app",
                 data: Object.assign({
-                    activeName: 'second',
+                    activeName: 'terminal',
                     canvas: {
                         bg: null,
                         fg: null,
@@ -210,6 +231,58 @@
                         }).then((ret) => {
                             console.log(ret)
                         })
+                    },
+                    loadTerminal() {
+                        let term;
+                        let ws = new WebSocket("ws://" + this.address + "/term");
+                        ws.binaryType = "arraybuffer"
+
+                        function ab2str(buf) {
+                            return String.fromCharCode.apply(null, new Uint8Array(buf));
+                        }
+
+                        ws.onopen = (evt) => {
+                            term = new Terminal({
+                                screenKeys: true,
+                                useStyle: true,
+                                cursorBlink: true
+                            })
+                            term.on('data', data => {
+                                ws.send(new TextEncoder().encode("\x00" + data))
+                            })
+
+                            term.on("resize", evt => {
+                                ws.send(new TextEncoder().encode("\x01" + JSON.stringify({
+                                    cols: evt.cols,
+                                    rows: evt.rows,
+                                })))
+                            })
+
+                            term.on("title", title => {
+                                console.log("title", title)
+                            })
+
+                            term.open(this.$refs.xterm);
+                            term.fit()
+                            // TODO(ssx): handle resize
+                        }
+
+                        ws.onmessage = (evt) => {
+                            if (evt.data instanceof ArrayBuffer) {
+                                term.write(ab2str(evt.data))
+                            } else {
+                                alert(evt.data)
+                            }
+                        }
+
+                        ws.onclose = (evt) => {
+                            term.write("Session terminated");
+                            term.destroy()
+                        }
+
+                        ws.onerror = (evt) => {
+                            console.log(evt)
+                        }
                     },
                     mirrorDisplay() {
                         var ws = new WebSocket(this.deviceUrl.replace(/^http/, "ws") + '/minicap');
@@ -247,7 +320,8 @@
                         var dtd = $.Deferred();
                         var ctx = canvas.getContext('2d'),
                             URL = window.URL || window.webkitURL,
-                            BLANK_IMG = 'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==',
+                            BLANK_IMG =
+                            'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==',
                             img = this.imagePool.next();
 
                         img.onload = () => {
@@ -303,6 +377,7 @@
                     this.$message({
                         message: "hi"
                     })
+                    this.loadTerminal()
                 },
                 computed: {
                     deviceUrl() {

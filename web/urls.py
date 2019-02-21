@@ -6,7 +6,7 @@ import os
 from .views import LogoutHandler, MainHandler
 from .views.device import (DeviceChangesWSHandler, DeviceItemHandler,
                            DeviceListHandler, APIUserDeviceHandler, DeviceControlHandler)
-from .views.slave import SlaveHeartbeatWSHandler
+from .views.provider import ProviderHeartbeatWSHandler
 from .views.upload import UploadItemHandler, UploadListHandler
 from .views.user import APIUserHandler, UserHandler
 
@@ -21,7 +21,7 @@ urlpatterns = [
     (r"/devices/([^/]+)", DeviceItemHandler),
     (r"/devices/([^/]+)/remotecontrol", DeviceControlHandler),
     (r"/websocket/devicechanges", DeviceChangesWSHandler),
-    (r"/websocket/heartbeat", SlaveHeartbeatWSHandler),
+    (r"/websocket/heartbeat", ProviderHeartbeatWSHandler),
     # (r"/device-control/([^/]+)", Device)
     # For compability of atx-server1
     (r"/list", DeviceListHandler),
