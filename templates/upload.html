@@ -23,9 +23,25 @@
     <div>
         <div>
             {{!title}}
+            <i class="fas fa-bars"></i>
         </div>
         <div>
         </div>
+    </div>
+    <el-upload ref="upload" class="upload-demo" drag action="/uploads" :on-success="onUpload" multiple>
+        <i class="el-icon-upload"></i>
+        <div class="el-upload__text">将文件拖到此处，或<em>点击上传</em></div>
+        <div class="el-upload__tip" slot="tip">暂时只支持apk的上传</div>
+    </el-upload>
+
+    <div>
+        <template v-for="f in files">
+            <el-card class="box-card">
+                <img :src="f.iconUrl" alt="icon" style="height: 40px">
+                {{!f.packageName}}
+                <em>{{!f.versionName}}</em>
+            </el-card>
+        </template>
     </div>
 </div>
 {% end %}
@@ -36,7 +52,28 @@
         el: "#app",
         data: {
             title: "hello world",
+            files: [{
+                iconUrl: "",
+                packageName: "ww",
+                versionName: "1.1.2"
+            }],
         },
+        methods: {
+            onUpload(resp, file, files) {
+                if (!resp.success) {
+                    this.$message({
+                        message: resp.description,
+                        type: "error",
+                    })
+                    return
+                }
+                this.files.push(resp.data)
+                console.log(resp)
+                console.log(file)
+                console.log(files)
+                this.$refs.upload.clearFiles()
+            }
+        }
     })
 </script>
 {% end %}

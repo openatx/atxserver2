@@ -101,6 +101,9 @@ class UploadListHandler(BaseRequestHandler):  # replace UploadListHandler
                     "versionName": version_name,
                 }
             })
+        except Exception as e:
+            self.set_status(400)  # bad request
+            self.write({"success": false, "description": str(e)})
         finally:
             self.ps.release_parts()
             self.finish()
