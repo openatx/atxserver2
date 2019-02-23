@@ -7,6 +7,7 @@ import time
 from logzero import logger
 from tornado import gen, websocket
 from tornado.ioloop import IOLoop
+from tornado.tcpclient import TCPClient
 
 
 class SafeWebSocket(websocket.WebSocketClientConnection):
@@ -16,9 +17,45 @@ class SafeWebSocket(websocket.WebSocketClientConnection):
         return await super().write_message(message)
 
 
+OKAY = "OKAY"
+FAIL = "FAIL"
+
+
+class SimpleADB(object):
+    def __init__(self):
+        self._stream = None
+        pass
+
+    async def watch(self):
+        print("Watch")
+        self._stream = await TCPClient().connect('127.0.0.1', 5037)
+        await self.send_cmd("host:devices")
+        data = await self.read_bytes(4)
+        if data == OKAY:
+            length = int(self.read_bytes(4), 16)
+            print("Len:", length)
+            message = self.read_bytes(length)
+            print("Message:", message)
+        elif data == FAIL:
+            length = int(self.read_bytes(4), 16)
+            print("Len:", length)
+            message = self.read_bytes(length)
+            print("Message:", message)
+        else:
+            print("Unknown head:", data)
+
+    async def send_cmd(self, cmd: str):
+        await self._stream.write("{:04x}{}".format(len(cmd), cmd))
+
+    async def read_bytes(self, num_bytes: int):
+        return await self._stream.read_bytes(num_bytes).decode()
+
+
 async def main():
     while True:
         try:
+            adb = SimpleADB()
+            await adb.watch()
             await run_provider()
         except TypeError:
             pass
