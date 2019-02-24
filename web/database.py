@@ -169,7 +169,6 @@ class DBTable(object):
         if self.__pkey in data:
             id = data[self.__pkey]
             ret = await self._run(self._table.get(id).update(data))
-            print(ret)
             if not ret['skipped']:
                 ret['id'] = id
                 return ret

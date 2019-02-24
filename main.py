@@ -24,6 +24,7 @@ def machine_ip():
     finally:
         s.close()
 
+
 def main():
     _auth_handlers = {
         "simple": SimpleLoginHandler,
@@ -32,10 +33,14 @@ def main():
 
     parser = argparse.ArgumentParser()
     # yapf: disable
-    parser.add_argument('-p', '--port', type=int, default=4000, help='listen port')
-    parser.add_argument('-d', '--debug', action='store_true', help='open debug log, and open hot reload')
-    parser.add_argument('--auth', type=str, default='simple', choices=_auth_handlers.keys(), help='authentication method')
-    parser.add_argument('--auth-conf-file', type=argparse.FileType('r'), help='authentication config file')
+    parser.add_argument('-p', '--port', type=int,
+                        default=4000, help='listen port')
+    parser.add_argument('-d', '--debug', action='store_true',
+                        help='open debug log, and open hot reload')
+    parser.add_argument('--auth', type=str, default='simple',
+                        choices=_auth_handlers.keys(), help='authentication method')
+    parser.add_argument(
+        '--auth-conf-file', type=argparse.FileType('r'), help='authentication config file')
     # yapf: enable
 
     args = parser.parse_args()
@@ -47,13 +52,13 @@ def main():
     ioloop = tornado.ioloop.IOLoop.current()
 
     # TODO(ssx): for debug use
-    async def dbtest():
-        items = await db.table("devices").get_all(
-            limit=2, rsql_hook=lambda q: q.order_by(r.desc("createdAt")))
-        for item in items:
-            pprint(item)
+    # async def dbtest():
+    #     items = await db.table("devices").get_all(
+    #         limit=2, rsql_hook=lambda q: q.order_by(r.desc("createdAt")))
+    #     for item in items:
+    #         pprint(item)
 
-    ioloop.spawn_callback(dbtest)
+    # ioloop.spawn_callback(dbtest)
 
     login_handler = _auth_handlers[args.auth]
     app = make_app(login_handler, debug=args.debug)

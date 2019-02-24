@@ -15,11 +15,11 @@ from .multipart_streamer import MultiPartStreamer
 
 
 class UploadItemHandler(StaticFileHandler):
-    async def get(self, path=None, include_body=True):
-        filepath = os.path.join('uploads', path)
+    async def get(self, path, include_body=True):
+        filepath = self.get_absolute_path(self.root, path)
         if os.path.isfile(filepath):
             os.utime(filepath, None)  # update modtime
-        return super().get(path, include_body)
+        await super().get(path, include_body)
 
 
 @stream_request_body
@@ -103,7 +103,7 @@ class UploadListHandler(BaseRequestHandler):  # replace UploadListHandler
             })
         except Exception as e:
             self.set_status(400)  # bad request
-            self.write({"success": false, "description": str(e)})
+            self.write({"success": False, "description": str(e)})
         finally:
             self.ps.release_parts()
             self.finish()

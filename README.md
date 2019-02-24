@@ -63,6 +63,9 @@ python3 main.py
 
 ## 接口
 
+占用设备
+
+**POST** 
 ### APK上传与解析
 
 **POST** /uploads
