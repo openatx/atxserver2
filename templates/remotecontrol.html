@@ -79,6 +79,10 @@
 </style>
 {% end %}
 
+{% block navbarlinks %}
+<a class="nav-item nav-link active" href="/">
+    <i class="fas fa-list-alt"></i> 设备控制</a>
+{% end %}
 {% block nav %}
 <nav class="navbar sticky-top navbar-expand-lg navbar-dark bg-dark">
     <div class="container-fluid">
@@ -136,13 +140,13 @@
                 <!-- <img style="z-index: 10" v-if="loading" src="/assets/loading.svg"> -->
             </section>
             <section class="footer d-flex justify-content-around debugarea">
-                <button class="btn btn-default grow-1" @click="runShell('input keyevent BACK')">
+                <button class="btn btn-default grow-1" @click="runKeyevent('BACK')">
                     <i class="fas fa-chevron-left"></i>
                 </button>
-                <button class="btn btn-default grow-1" @click="runShell('input keyevent HOME')">
+                <button class="btn btn-default grow-1" @click="runKeyevent('HOME')">
                     <i class="fas fa-home"></i>
                 </button>
-                <button class="btn btn-default grow-1" @click="runShell('input keyevent MENU')">
+                <button class="btn btn-default grow-1" @click="runKeyevent('MENU')">
                     <i class="fas fa-bars"></i></button>
             </section>
         </div>
@@ -239,21 +243,25 @@
                     term: null, // Terminal object
                     websockets: {
                         screen: null,
+                        touchpad: null,
                     },
                     imagePool: new ImagePool(100),
                 }, ret.data),
                 methods: {
                     runShell(command) {
-                        $.ajax({
+                        return $.ajax({
                             method: "get",
                             url: this.deviceUrl + "/shell",
                             data: {
                                 "command": command,
                             },
                             dataType: "json"
-                        }).then((ret) => {
-                            console.log(ret)
+                        }).done((ret) => {
+                            console.log(command, ret)
                         })
+                    },
+                    runKeyevent(key) {
+                        return this.runShell("input keyevent " + key.toUpperCase())
                     },
                     handleTabClick(tab, event) {
                         console.log(tab.name)
@@ -367,6 +375,114 @@
                             this.websockets.screen = null;
                         }
                     },
+                    syncTouchpad() {
+                        let ws = new WebSocket("ws://" + this.address + "/minitouch")
+                        ws.onopen = (ret) => {
+                            console.log("minitouch synced")
+                            this.websockets.touchpad = ws
+                        }
+                        ws.onmessage = (message) => {
+                            console.log("minitouch recv", message)
+                        }
+                        ws.onclose = () => {
+                            this.websockets.touchpad = null;
+                        }
+
+                        let element = this.canvas.bg; // maybe fg is better
+
+                        let mouseDownListener = (event) => {
+                            var e = event;
+                            if (e.originalEvent) {
+                                e = e.originalEvent
+                            }
+                            e.preventDefault()
+
+                            // Skip secondary click
+                            // TODO(ssx): right click should equals HOME
+                            if (e.which === 3) {
+                                this.runKeyevent("HOME")
+                                return
+                            }
+
+
+                            fakePinch = e.altKey
+                            calculateBounds()
+
+                            var x = e.pageX - screen.bounds.x
+                            var y = e.pageY - screen.bounds.y
+                            var pressure = 0.5
+                            // activeFinger(0, e.pageX, e.pageY, pressure);
+
+                            var scaled = coords(screen.bounds.w, screen.bounds.h, x, y, self.rotation);
+                            // ws.write
+                            control.touchDown(0, scaled.xP, scaled.yP, pressure);
+                            control.touchCommit();
+
+                            element.removeEventListener('mousemove', mouseHoverListener);
+                            element.addEventListener('mousemove', mouseMoveListener);
+                            document.addEventListener('mouseup', mouseUpListener);
+                        }
+
+                        function mouseMoveListener(event) {
+                            var e = event
+                            if (e.originalEvent) {
+                                e = e.originalEvent
+                            }
+                            // Skip secondary click
+                            if (e.which === 3) {
+                                return
+                            }
+                            e.preventDefault()
+
+                            var pressure = 0.5
+                            activeFinger(0, e.pageX, e.pageY, pressure);
+                            var x = e.pageX - screen.bounds.x
+                            var y = e.pageY - screen.bounds.y
+                            var scaled = coords(screen.bounds.w, screen.bounds.h, x, y, self.rotation);
+                            control.touchMove(0, scaled.xP, scaled.yP, pressure);
+                            control.touchCommit();
+                        }
+
+                        function mouseUpListener(event) {
+                            var e = event
+                            if (e.originalEvent) {
+                                e = e.originalEvent
+                            }
+                            // Skip secondary click
+                            if (e.which === 3) {
+                                return
+                            }
+                            e.preventDefault()
+
+                            control.touchUp(0)
+                            control.touchCommit();
+                            stopMousing()
+                        }
+
+                        function stopMousing() {
+                            element.removeEventListener('mousemove', mouseMoveListener);
+                            // element.addEventListener('mousemove', mouseHoverListener);
+                            document.removeEventListener('mouseup', mouseUpListener);
+                            deactiveFinger(0);
+                        }
+
+                        function activeFinger(index, x, y, pressure) {
+                            var scale = 0.5 + pressure
+                            $(".finger-" + index)
+                                .addClass("active")
+                                .css("transform", 'translate3d(' + x + 'px,' + y + 'px,0)')
+                        }
+
+                        function deactiveFinger(index) {
+                            $(".finger-" + index).removeClass("active")
+                        }
+
+                        /* bind listeners */
+                        element.addEventListener('mousedown', mouseDownListener);
+                        element.addEventListener('contextmenu', event => event.preventDefault());
+                        // element.addEventListener('mousemove', mouseHoverListener);
+                        // element.addEventListener('mousewheel', mouseWheelListener);
+                    },
                     fitCanvas(canvas) {
                         if (canvas.width > canvas.height) {
                             this.canvasStyle.height = "auto"
@@ -432,6 +548,7 @@
                     this.canvas.fg = this.$refs.fgCanvas
                     let ctx = this.canvas.bg.getContext('2d');
                     this.mirrorDisplay()
+                    this.syncTouchpad()
 
                     new ResizeSensor(this.canvas.bg.parentElement, (e) => {
                         this.fitCanvas(this.canvas.bg)

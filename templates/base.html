@@ -31,12 +31,12 @@
                 </a>
                 <div class="collapse navbar-collapse" id="navbarNavDropdown">
                     <div class="navbar-nav">
-                        <a class="nav-item nav-link active" href="/">
-                            <i class="fab fa-android"></i> 安卓设备</a>
-                        <a class="nav-item nav-link" href="#">
-                            <i class="fab fa-apple"></i> 苹果设备</a>
-                        <a class="nav-item nav-link" href="/uploads">
-                            文件上传</a>
+                        <a v-for="l in links" :href="l.path" class="nav-item nav-link"
+                            :class="{active: l.path == activePath}">
+                            <i :class="l.icon"></i> {{!l.name}}</a>
+                        </a>
+                        {% block navbarlinks %}
+                        {% end %}
                         <!-- <a class="nav-item nav-link active" href='/'> -->
                         <!-- </a> -->
                     </div>
@@ -65,6 +65,28 @@
             {% block content %}{% end %}
         </div>
     </div>
+
+    <script>
+        new Vue({
+            el: "#navbarNavDropdown",
+            data: {
+                links: [{
+                    path: "/devices",
+                    name: "安卓设备",
+                    icon: ["fab", "fa-android"]
+                }, {
+                    path: "/apples",
+                    name: "苹果设备",
+                    icon: ["fab", "fa-apple"]
+                }, {
+                    path: "/uploads",
+                    name: "文件上传",
+                    icon: ["fas fa-cloud-upload-alt"]
+                }],
+                activePath: location.pathname,
+            }
+        })
+    </script>
 
     {% block script %}
     <script>
