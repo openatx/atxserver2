@@ -409,6 +409,7 @@
                         ws.onclose = () => {
                             this.websockets.touchpad = null;
                             element.removeEventListener('mousedown', mouseDownListener);
+                            element.removeEventListener('mousewheel', mouseWheelListener);
                         }
 
                         function calculateBounds() {
@@ -503,23 +504,25 @@
                             }
                         }
 
-                        function touchDown(index, xP, yP, pressure) {
+                        let touchDown = (index, x, y, pressure) => {
+                            let scaled = coords(screen.bounds.w, screen.bounds.h, x, y, this.rotation);
                             ws.send(JSON.stringify({
                                 operation: 'd',
                                 index: index,
                                 pressure: pressure,
-                                xP: xP,
-                                yP: yP,
+                                xP: scaled.xP,
+                                yP: scaled.yP,
                             }))
                         }
 
-                        function touchMove(index, xP, yP, pressure) {
+                        let touchMove = (index, x, y, pressure) => {
+                            let scaled = coords(screen.bounds.w, screen.bounds.h, x, y, this.rotation);
                             ws.send(JSON.stringify({
                                 operation: 'm',
                                 index: index,
                                 pressure: pressure,
-                                xP: xP,
-                                yP: yP,
+                                xP: scaled.xP,
+                                yP: scaled.yP,
                             }))
                         }
 
@@ -556,9 +559,7 @@
                             var pressure = 0.5
                             // activeFinger(0, e.pageX, e.pageY, pressure);
 
-                            var scaled = coords(screen.bounds.w, screen.bounds.h, x, y, this.rotation);
-                            // ws.write
-                            touchDown(0, scaled.xP, scaled.yP, pressure);
+                            touchDown(0, x, y, pressure);
                             touchCommit();
 
                             // element.removeEventListener('mousemove', mouseHoverListener);
@@ -581,9 +582,8 @@
                             activeFinger(0, e.pageX, e.pageY, pressure);
                             var x = e.pageX - screen.bounds.x
                             var y = e.pageY - screen.bounds.y
-                            var scaled = coords(screen.bounds.w, screen.bounds.h, x, y, this.rotation);
 
-                            touchMove(0, scaled.xP, scaled.yP, pressure);
+                            touchMove(0, x, y, pressure);
                             touchCommit();
                         }
 
@@ -625,10 +625,48 @@
                             event.preventDefault()
                         }
 
+                        let wheel = {
+                            count: 0,
+                            key: null,
+                        };
+
+                        function mouseWheelListener(event) {
+                            let e = event
+                            if (e.originalEvent) {
+                                e = e.originalEvent
+                            }
+
+                            calculateBounds()
+                            let x = e.pageX - screen.bounds.x
+                            let y = e.pageY - screen.bounds.y
+                            let pressure = 0.5
+
+                            if (wheel.key === null) { // mouse down
+                                touchDown(1, x, y, pressure)
+                                touchCommit()
+                            } else {
+                                clearTimeout(wheel.key)
+                            }
+
+                            // mouse move
+                            wheel.count += 1
+                            const direction = e.deltaY > 0 ? -1 : 1
+                            const offsetY = wheel.count * direction * 0.2 * screen.bounds.h
+                            touchMove(1, x, y + offsetY, pressure)
+                            touchCommit()
+
+                            wheel.key = setTimeout(() => { // wheel stopped do mouse up
+                                touchUp()
+                                touchCommit()
+                                wheel.key = null;
+                                wheel.count = 0;
+                            }, 100)
+                        }
+
                         /* bind listeners */
                         element.addEventListener('mousedown', mouseDownListener);
+                        element.addEventListener('mousewheel', mouseWheelListener);
                         // element.addEventListener('mousemove', mouseHoverListener);
-                        // element.addEventListener('mousewheel', mouseWheelListener);
                     },
                     closeSyncTouchpad() {
                         if (this.websockets.touchpad) {

@@ -10,12 +10,13 @@
 - [RethinkDB](https://rethinkdb.com/)
 
 ## Features
+- [x] APK上传和解析
 - [x] 设备远程控制
 
     - [x] 右键屏幕等价于点击HOME键
     - [x] 屏幕到后台自动断开WebSocket连接
+    - [x] 鼠标滚轮翻屏
 
-- [x] APK上传和解析
 
 ## 部署
 ```bash
