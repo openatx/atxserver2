@@ -128,8 +128,16 @@
         <div class="col-sm debugarea d-flex flex-column justify-content-center nopadding grow-0">
             <section class="debugarea" style="height: 2rem; line-height: 2rem; justify-self: start">
                 {{!udid}}
-                <i v-if="displayLinked" @click="closeMirrorDisplay" class="fas fa-link" style="color: green"></i>
-                <i v-else @click="mirrorDisplay" class="fas fa-unlink" style="color: red"></i>
+                <span>
+                    <i v-if="displayLinked" @click="closeMirrorDisplay" class="fas fa-link" style="color: green"></i>
+                    <i v-else @click="mirrorDisplay" class="fas fa-unlink" style="color: red"></i>
+                </span>
+                <span>
+                    <i v-if="websockets.touchpad != null" @click="closeSyncTouchpad" class="far fa-hand-paper"
+                        style="color: green"></i>
+                    <i v-else @click="syncTouchpad" class="far fa-hand-paper" style="color: red"></i>
+                </span>
+
             </section>
             <section class="screen debugarea d-flex grow-1 align-items-center justify-content-center"
                 style="line-height: 0px">
@@ -239,7 +247,7 @@
                         width: '400px',
                         height: '200px'
                     },
-                    displayLinked: false,
+                    rotation: 0,
                     term: null, // Terminal object
                     websockets: {
                         screen: null,
@@ -247,6 +255,7 @@
                     },
                     imagePool: new ImagePool(100),
                 }, ret.data),
+
                 methods: {
                     runShell(command) {
                         return $.ajax({
@@ -301,7 +310,7 @@
                                 console.log("title", title)
                             })
 
-                            term.open(this.$refs.xterm);
+                            term.open(this.$refs.xterm, { focus: true });
                             term.fit()
                             this.term = term;
 
@@ -330,10 +339,15 @@
                         }
                     },
                     mirrorDisplay() {
-                        var ws = new WebSocket(this.deviceUrl.replace(/^http/, "ws") + '/minicap');
+                        if (this.websockets.screen) {
+                            return
+                        }
+
+                        let ws = new WebSocket(this.deviceUrl.replace(/^http/, "ws") + '/minicap');
+                        this.websockets.screen = ws;
+
                         ws.onopen = (ev) => {
                             console.log('screen websocket connected')
-                            this.displayLinked = true
                             this.canvasStyle.opacity = 1;
                         };
                         ws.onmessage = (message) => {
@@ -342,33 +356,31 @@
                             } else if (/data size: /.test(message.data)) {
                                 // console.log("receive message:", message.data)
                             } else if (/^rotation/.test(message.data)) {
-                                self.rotation = parseInt(message.data.substr('rotation '.length), 10);
-                                console.log(self.rotation)
+                                this.rotation = parseInt(message.data.substr('rotation '.length), 10);
+                                console.log(this.rotation)
                             } else {
                                 console.log("receive message:", message.data)
                             }
                         }
                         ws.onclose = (ev) => {
                             console.log("screen websocket closed", ev.code)
-                            if (this.displayLinked) {
+                            if (this.canvasStyle.opacity == 1) {
                                 this.$message({
                                     showClose: true,
                                     message: '设备屏幕同步中断',
                                     type: 'error',
                                     duration: 0,
                                 });
-                                this.displayLinked = false;
+                                this.canvasStyle.opacity = 0.5;
                             }
+                            this.websockets.screen = null;
                         }
 
                         ws.onerror = function (ev) {
                             console.log("screen websocket error")
                         }
-
-                        this.websockets.screen = ws;
                     },
                     closeMirrorDisplay() {
-                        this.displayLinked = false
                         this.canvasStyle.opacity = 0.5;
                         if (this.websockets.screen) {
                             this.websockets.screen.close()
@@ -376,19 +388,151 @@
                         }
                     },
                     syncTouchpad() {
+                        if (this.websockets.touchpad) { // Skip when already connected
+                            return
+                        }
+
+                        let element = this.canvas.bg; // maybe fg is better
+                        let screen = {
+                            bounds: {}
+                        }
+
                         let ws = new WebSocket("ws://" + this.address + "/minitouch")
+                        this.websockets.touchpad = ws
+
                         ws.onopen = (ret) => {
                             console.log("minitouch synced")
-                            this.websockets.touchpad = ws
                         }
                         ws.onmessage = (message) => {
                             console.log("minitouch recv", message)
                         }
                         ws.onclose = () => {
                             this.websockets.touchpad = null;
+                            element.removeEventListener('mousedown', mouseDownListener);
                         }
 
-                        let element = this.canvas.bg; // maybe fg is better
+                        function calculateBounds() {
+                            var el = element;
+                            screen.bounds.w = el.offsetWidth
+                            screen.bounds.h = el.offsetHeight
+                            screen.bounds.x = 0
+                            screen.bounds.y = 0
+
+                            while (el.offsetParent) {
+                                screen.bounds.x += el.offsetLeft
+                                screen.bounds.y += el.offsetTop
+                                el = el.offsetParent
+                            }
+                        }
+
+                        /**
+                         * Rotation affects the screen as follows:
+                         *
+                         *                   0deg
+                         *                 |------|
+                         *                 | MENU |
+                         *                 |------|
+                         *            -->  |      |  --|
+                         *            |    |      |    v
+                         *                 |      |
+                         *                 |      |
+                         *                 |------|
+                         *        |----|-|          |-|----|
+                         *        |    |M|          | |    |
+                         *        |    |E|          | |    |
+                         *  90deg |    |N|          |U|    | 270deg
+                         *        |    |U|          |N|    |
+                         *        |    | |          |E|    |
+                         *        |    | |          |M|    |
+                         *        |----|-|          |-|----|
+                         *                 |------|
+                         *            ^    |      |    |
+                         *            |--  |      |  <--
+                         *                 |      |
+                         *                 |      |
+                         *                 |------|
+                         *                 | UNEM |
+                         *                 |------|
+                         *                  180deg
+                         *
+                         * Which leads to the following mapping:
+                         *
+                         * |--------------|------|---------|---------|---------|
+                         * |              | 0deg |  90deg  |  180deg |  270deg |
+                         * |--------------|------|---------|---------|---------|
+                         * | CSS rotate() | 0deg | -90deg  | -180deg |  90deg  |
+                         * | bounding w   |  w   |    h    |    w    |    h    |
+                         * | bounding h   |  h   |    w    |    h    |    w    |
+                         * | pos x        |  x   |   h-y   |   w-x   |    y    |
+                         * | pos y        |  y   |    x    |   h-y   |   h-x   |
+                         * |--------------|------|---------|---------|---------|
+                         */
+                        function coords(boundingW, boundingH, relX, relY, rotation) {
+                            var w, h, x, y;
+
+                            switch (rotation) {
+                                case 0:
+                                    w = boundingW
+                                    h = boundingH
+                                    x = relX
+                                    y = relY
+                                    break
+                                case 90:
+                                    w = boundingH
+                                    h = boundingW
+                                    x = boundingH - relY
+                                    y = relX
+                                    break
+                                case 180:
+                                    w = boundingW
+                                    h = boundingH
+                                    x = boundingW - relX
+                                    y = boundingH - relY
+                                    break
+                                case 270:
+                                    w = boundingH
+                                    h = boundingW
+                                    x = relY
+                                    y = boundingW - relX
+                                    break
+                            }
+
+                            return {
+                                xP: x / w,
+                                yP: y / h,
+                            }
+                        }
+
+                        function touchDown(index, xP, yP, pressure) {
+                            ws.send(JSON.stringify({
+                                operation: 'd',
+                                index: index,
+                                pressure: pressure,
+                                xP: xP,
+                                yP: yP,
+                            }))
+                        }
+
+                        function touchMove(index, xP, yP, pressure) {
+                            ws.send(JSON.stringify({
+                                operation: 'm',
+                                index: index,
+                                pressure: pressure,
+                                xP: xP,
+                                yP: yP,
+                            }))
+                        }
+
+                        function touchUp(index) {
+                            ws.send(JSON.stringify({
+                                operation: 'u',
+                                index: index,
+                            }))
+                        }
+
+                        function touchCommit() {
+                            ws.send(JSON.stringify({ operation: 'c' }))
+                        }
 
                         let mouseDownListener = (event) => {
                             var e = event;
@@ -397,8 +541,7 @@
                             }
                             e.preventDefault()
 
-                            // Skip secondary click
-                            // TODO(ssx): right click should equals HOME
+                            // Right click equals HOME
                             if (e.which === 3) {
                                 this.runKeyevent("HOME")
                                 return
@@ -413,17 +556,17 @@
                             var pressure = 0.5
                             // activeFinger(0, e.pageX, e.pageY, pressure);
 
-                            var scaled = coords(screen.bounds.w, screen.bounds.h, x, y, self.rotation);
+                            var scaled = coords(screen.bounds.w, screen.bounds.h, x, y, this.rotation);
                             // ws.write
-                            control.touchDown(0, scaled.xP, scaled.yP, pressure);
-                            control.touchCommit();
+                            touchDown(0, scaled.xP, scaled.yP, pressure);
+                            touchCommit();
 
-                            element.removeEventListener('mousemove', mouseHoverListener);
+                            // element.removeEventListener('mousemove', mouseHoverListener);
                             element.addEventListener('mousemove', mouseMoveListener);
                             document.addEventListener('mouseup', mouseUpListener);
                         }
 
-                        function mouseMoveListener(event) {
+                        let mouseMoveListener = (event) => {
                             var e = event
                             if (e.originalEvent) {
                                 e = e.originalEvent
@@ -438,9 +581,10 @@
                             activeFinger(0, e.pageX, e.pageY, pressure);
                             var x = e.pageX - screen.bounds.x
                             var y = e.pageY - screen.bounds.y
-                            var scaled = coords(screen.bounds.w, screen.bounds.h, x, y, self.rotation);
-                            control.touchMove(0, scaled.xP, scaled.yP, pressure);
-                            control.touchCommit();
+                            var scaled = coords(screen.bounds.w, screen.bounds.h, x, y, this.rotation);
+
+                            touchMove(0, scaled.xP, scaled.yP, pressure);
+                            touchCommit();
                         }
 
                         function mouseUpListener(event) {
@@ -454,8 +598,8 @@
                             }
                             e.preventDefault()
 
-                            control.touchUp(0)
-                            control.touchCommit();
+                            touchUp(0)
+                            touchCommit()
                             stopMousing()
                         }
 
@@ -477,11 +621,19 @@
                             $(".finger-" + index).removeClass("active")
                         }
 
+                        function preventHandler(event) {
+                            event.preventDefault()
+                        }
+
                         /* bind listeners */
                         element.addEventListener('mousedown', mouseDownListener);
-                        element.addEventListener('contextmenu', event => event.preventDefault());
                         // element.addEventListener('mousemove', mouseHoverListener);
                         // element.addEventListener('mousewheel', mouseWheelListener);
+                    },
+                    closeSyncTouchpad() {
+                        if (this.websockets.touchpad) {
+                            this.websockets.touchpad.close()
+                        }
                     },
                     fitCanvas(canvas) {
                         if (canvas.width > canvas.height) {
@@ -554,13 +706,17 @@
                         this.fitCanvas(this.canvas.bg)
                     })
 
+                    this.canvas.bg.addEventListener('contextmenu', event => event.preventDefault());
+
                     // save the bandwidth
                     document.addEventListener("visibilitychange", () => {
                         let pageHidden = document.hidden;
                         if (pageHidden) {
                             this.closeMirrorDisplay()
+                            this.closeSyncTouchpad()
                         } else {
                             this.mirrorDisplay()
+                            this.syncTouchpad()
                         }
                     })
                 },
@@ -573,6 +729,9 @@
                     },
                     screenshotUrl() {
                         return "http://" + this.address + "/screenshot"
+                    },
+                    displayLinked() {
+                        return this.websockets.screen !== null;
                     }
                 },
                 components: {

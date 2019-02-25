@@ -56,7 +56,8 @@ class SimpleADB(object):
             print("Unknown head:", data)
 
     async def send_cmd(self, cmd: str):
-        await self._stream.write("{:04x}{}".format(len(cmd), cmd).encode('utf-8'))
+        await self._stream.write("{:04x}{}".format(len(cmd),
+                                                   cmd).encode('utf-8'))
 
     async def read_bytes(self, num_bytes: int):
         return (await self._stream.read_bytes(num_bytes)).decode()
@@ -77,7 +78,8 @@ class AppHandler(RequestHandler):
             fp.seek(0)
             logger.debug("install apk")
             p = subprocess.Popen(["adb", "install", "-r", fp.name],
-                                 stdout=sys.stdout, stderr=sys.stderr)
+                                 stdout=sys.stdout,
+                                 stderr=sys.stderr)
             p.wait(timeout=60)
             logger.debug("done")
             # logger.debug("output: %s")
@@ -123,8 +125,8 @@ async def main():
 
 
 async def run_provider(server_addr: str):
-    ws = await websocket.websocket_connect(
-        "ws://"+server_addr+"/websocket/heartbeat")
+    ws = await websocket.websocket_connect("ws://" + server_addr +
+                                           "/websocket/heartbeat")
     ws.__class__ = SafeWebSocket
     await ws.write_message({"command": "ping"})
     msg = await ws.read_message()
@@ -142,7 +144,7 @@ async def run_provider(server_addr: str):
     # print(msg)
     await ws.write_message({
         "command": "update",
-        "address": "192.168.0.110:7912",  # atx-agent listen address
+        "address": "10.242.228.218:7912",  # atx-agent listen address
         "data": {
             "udid": "abcdefg",
             "platform": "android",

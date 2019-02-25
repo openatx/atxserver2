@@ -20,14 +20,6 @@
 {% block content %}
 <div class="container">
     <h3>文件上传</h3>
-    <div>
-        <div>
-            {{!title}}
-            <i class="fas fa-bars"></i>
-        </div>
-        <div>
-        </div>
-    </div>
     <el-upload ref="upload" class="upload-demo" drag action="/uploads" :on-success="onUpload" multiple>
         <i class="el-icon-upload"></i>
         <div class="el-upload__text">将文件拖到此处，或<em>点击上传</em></div>
@@ -37,7 +29,7 @@
     <div>
         <template v-for="f in files">
             <el-card class="box-card">
-                <img :src="f.iconUrl" alt="icon" style="height: 40px">
+                <img :src="f.iconUrl" alt="icon" style="height: 30px;">
                 {{!f.packageName}}
                 <em>{{!f.versionName}}</em>
             </el-card>
@@ -53,7 +45,7 @@
         data: {
             title: "hello world",
             files: [{
-                iconUrl: "",
+                iconUrl: "/static/images/android-logo-robot.png",
                 packageName: "ww",
                 versionName: "1.1.2"
             }],
@@ -66,6 +58,9 @@
                         type: "error",
                     })
                     return
+                }
+                if (!resp.data.iconUrl) {
+                    resp.data.iconUrl = "/static/images/android-logo-robot.png"
                 }
                 this.files.push(resp.data)
                 console.log(resp)
