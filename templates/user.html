@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}设备列表{% end %}
+{% block title %}用户详情{% end %}
 
 {% block script %}
 {% end %}
@@ -23,23 +23,31 @@
     <div>
         <div>
             <label>Email</label>
-            {{current_user.email}}
+            {{!email}}
         </div>
         <div>
             <label>Username</label>
-            {{current_user.username}}
+            {{!username}}
         </div>
+    </div>
+    <div class="card">
+        <h4>所属组</h4>
+        <ul>
+            <li v-for="g in groups">Name: {{!g.name}} ID: {{!g.id}} Admin: {{!g.auth.admin ? "true" : "false"}}</li>
+        </ul>
+        <a href="/user/group_create">创建组</a>
     </div>
 </div>
 {% end %}
 
 {% block script %}
 <script>
-    $.getJSON("/api/user")
+    $.getJSON("/api/v1/user")
         .then((ret) => {
             console.log(ret)
             new Vue({
                 el: "#app",
+                data: ret,
             })
         })
 </script>

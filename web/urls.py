@@ -8,11 +8,12 @@ from .views.device import (DeviceChangesWSHandler, DeviceItemHandler,
                            DeviceListHandler, APIUserDeviceHandler, DeviceControlHandler)
 from .views.provider import ProviderHeartbeatWSHandler
 from .views.upload import UploadItemHandler, UploadListHandler
-from .views.user import APIUserHandler, UserHandler
+from .views.user import APIUserHandler, UserHandler, APIUserGroupHandler, UserGroupCreateHandler
 
 urlpatterns = [
     (r"/", MainHandler),
     (r"/user", UserHandler),
+    (r"/user/group_create", UserGroupCreateHandler),
     (r"/logout", LogoutHandler),
     (r"/uploads", UploadListHandler),
     (r"/uploads/(.*)", UploadItemHandler,
@@ -28,6 +29,7 @@ urlpatterns = [
     (r"/api/v1/user", APIUserHandler),
     (r"/api/v1/user/devices", APIUserDeviceHandler),
     (r"/api/v1/user/devices/([^/]+)", APIUserDeviceHandler),
+    (r"/api/v1/user/groups", APIUserGroupHandler),
     # GET /api/v1/devices
     # POST /api/v1/user/devices/{serial}/remoteConnect
     # DELETE /api/v1/user/devices/{serial}/remoteConnect

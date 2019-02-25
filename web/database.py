@@ -40,7 +40,10 @@ class DB(object):
         "users": {
             "name": "users",
             "primary_key": "email",
-        }
+        },
+        "groups": {
+            "name": "groups",
+        },
     }
 
     def __init__(self, db='demo', **kwargs):
