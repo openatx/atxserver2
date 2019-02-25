@@ -161,6 +161,25 @@
         </div>
         <div class="col-sm debugarea" style="overflow-y: auto">
             <el-tabs v-model="activeName" @tab-click="handleTabClick">
+                <el-tab-pane label="常用" name="common">
+                    <div class="row">
+                        <div class="col-6">
+                            <div class="card">
+                                <div class="card-header">
+                                    ATX
+                                </div>
+                                <div class="card-body">
+                                    {{!address}}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-6"></div>
+                        <div class="col-6"></div>
+                        <div class="col-6"></div>
+                        <div class="col-6"></div>
+                    </div>
+
+                </el-tab-pane>
                 <el-tab-pane label="Terminal" name="terminal">
                     <p><code>Ctrl+Ins</code>复制，<code>Shift+Ins</code>粘贴</p>
                     <div ref="xterm" class="xterm-wrapper"></div>
@@ -238,7 +257,7 @@
             vm = new Vue({
                 el: "#app",
                 data: Object.assign({
-                    activeName: 'screenshot',
+                    activeName: 'common',
                     canvas: {
                         bg: null,
                         fg: null,
@@ -340,9 +359,7 @@
                         }
                     },
                     mirrorDisplay() {
-                        if (this.websockets.screen) {
-                            return
-                        }
+                        this.syncTouchpad()
 
                         let ws = new WebSocket(this.deviceUrl.replace(/^http/, "ws") + '/minicap');
                         this.websockets.screen = ws;
@@ -364,8 +381,8 @@
                             }
                         }
                         ws.onclose = (ev) => {
-                            console.log("screen websocket closed", ev.code)
-                            if (this.canvasStyle.opacity == 1) {
+                            if (this.websockets.screen === ws) {
+                                console.log("websocket op", this.canvasStyle.opacity)
                                 this.$message({
                                     showClose: true,
                                     message: '设备屏幕同步中断',
@@ -374,9 +391,7 @@
                                 });
                                 this.canvasStyle.opacity = 0.5;
                             }
-                            this.websockets.screen = null;
                         }
-
                         ws.onerror = function (ev) {
                             console.log("screen websocket error")
                         }
@@ -384,15 +399,13 @@
                     closeMirrorDisplay() {
                         this.canvasStyle.opacity = 0.5;
                         if (this.websockets.screen) {
-                            this.websockets.screen.close()
+                            let ws = this.websockets.screen;
                             this.websockets.screen = null;
+                            ws.close()
                         }
+                        this.closeSyncTouchpad()
                     },
                     syncTouchpad() {
-                        if (this.websockets.touchpad) { // Skip when already connected
-                            return
-                        }
-
                         let element = this.canvas.bg; // maybe fg is better
                         let screen = {
                             bounds: {}
@@ -405,10 +418,12 @@
                             console.log("minitouch synced")
                         }
                         ws.onmessage = (message) => {
-                            console.log("minitouch recv", message)
+                            // console.log("minitouch recv", message)
                         }
                         ws.onclose = () => {
-                            this.websockets.touchpad = null;
+                            if (this.websockets.touchpad === ws) {
+                                this.websockets.touchpad = null;
+                            }
                             element.removeEventListener('mousedown', mouseDownListener);
                             element.removeEventListener('mousewheel', mouseWheelListener);
                         }
