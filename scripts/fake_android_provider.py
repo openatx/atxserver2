@@ -144,7 +144,7 @@ async def run_provider(server_addr: str):
     # print(msg)
     await ws.write_message({
         "command": "update",
-        "address": "10.242.228.218:7912",  # atx-agent listen address
+        "address": "10.240.171.164:8100",  # atx-agent listen address
         "data": {
             "udid": "abcdefg",
             "platform": "android",

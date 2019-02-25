@@ -19,7 +19,6 @@ class ProviderHeartbeatWSHandler(BaseWebSocketHandler):
     def initialize(self):
         self._owner = None
         self._id = None
-        self._slaves = {}
         self._info = None
 
     def open(self):
