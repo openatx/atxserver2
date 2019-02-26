@@ -5,7 +5,8 @@ import os
 
 from .views import LogoutHandler, MainHandler
 from .views.device import (DeviceChangesWSHandler, DeviceItemHandler,
-                           DeviceListHandler, APIUserDeviceHandler, DeviceControlHandler)
+                           DeviceListHandler, APIUserDeviceHandler,
+                           DeviceControlHandler, AppleDeviceListHandler)
 from .views.provider import ProviderHeartbeatWSHandler
 from .views.upload import UploadItemHandler, UploadListHandler
 from .views.user import APIUserHandler, UserHandler, APIUserGroupHandler, UserGroupCreateHandler
@@ -18,6 +19,7 @@ urlpatterns = [
     (r"/uploads", UploadListHandler),
     (r"/uploads/(.*)", UploadItemHandler,
         {'path': os.path.join(os.getcwd(), 'uploads')}),
+    (r"/apples", AppleDeviceListHandler),
     (r"/devices", DeviceListHandler),
     (r"/devices/([^/]+)", DeviceItemHandler),
     (r"/devices/([^/]+)/remotecontrol", DeviceControlHandler),

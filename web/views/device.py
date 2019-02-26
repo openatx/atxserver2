@@ -123,6 +123,11 @@ class DeviceItemHandler(BaseRequestHandler):
         self.write("No such html")
 
 
+class AppleDeviceListHandler(BaseRequestHandler):
+    def get(self):
+        self.render("apple.html")
+
+
 class DeviceListHandler(BaseRequestHandler):
     """ Device List will show in first page """
 
