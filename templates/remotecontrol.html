@@ -382,12 +382,13 @@
                         }
                         ws.onclose = (ev) => {
                             if (this.websockets.screen === ws) {
+                                this.websockets.screen = null;
                                 console.log("websocket op", this.canvasStyle.opacity)
                                 this.$message({
                                     showClose: true,
                                     message: '设备屏幕同步中断',
                                     type: 'error',
-                                    duration: 0,
+                                    // duration: 0,
                                 });
                                 this.canvasStyle.opacity = 0.5;
                             }
@@ -560,9 +561,14 @@
                             }
                             e.preventDefault()
 
-                            // Right click equals HOME
-                            if (e.which === 3) {
+                            // Middle click equals HOME
+                            if (e.which === 2) {
                                 this.runKeyevent("HOME")
+                                return
+                            }
+                            // Right click equals BACK
+                            if (e.which === 3) {
+                                this.runKeyevent("BACK")
                                 return
                             }
 

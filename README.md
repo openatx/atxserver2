@@ -1,7 +1,7 @@
 ## atxserver2
 移动设备管理平台
 
-**仍在开发中,暂时还不能用**
+**开发中,即将能开始用了**
 
 ![img](static/favicon-dark.png)
 
@@ -13,9 +13,11 @@
 - [x] APK上传和解析
 - [x] 设备远程控制
 
-    - [x] 右键屏幕等价于点击HOME键
+    - [x] 鼠标右键点击BACK，中间点击HOME
     - [x] 屏幕到后台自动断开WebSocket连接
     - [x] 鼠标滚轮翻屏
+    - [ ] 上传安装应用
+    - [ ] 常用功能(打开网址, 电源)
 
 
 ## 部署
@@ -48,6 +50,12 @@ export RDB_DBNAME=atxserver2
 python3 main.py
 ```
 
+## 操作指南
+鼠标操作
+
+- Right-Click: BACK
+- Middle-Click: HOME
+
 ## Developers
 目前采用tornado+rethinkdb
 
@@ -67,41 +75,13 @@ python3 main.py
         |-- base.py 基于RequestHandler的基类
 ```
 
-设备占用接口参考[openstf API](https://github.com/openstf/stf/blob/master/doc/API.md)
-
 ## 接口
+详情点击 接口[REST API](API.md)
 
-占用设备
-
-**POST** 
-### APK上传与解析
-
-**POST** /uploads
-
-```bash
-$ http POST $SERVER_URL/uploads file@wakey.appso.apk
-HTTP/1.1 200 OK
-Content-Length: 411
-Content-Type: application/json; charset=UTF-8
-Date: Wed, 23 Jan 2019 06:28:54 GMT
-Server: TornadoServer/4.5.3
-
-{
-    "data": {
-        "url": "http://localhost:4000/uploads/13/f46364434b526b77620ebf9bcf7322/com.doublep.wakey.apk",
-        "md5sum": "13f46364434b526b77620ebf9bcf7322",
-        "iconPath": "res/drawable-xxhdpi/ic_launcher.png",
-        "iconUrl": "http://localhost:4000/uploads/13/f46364434b526b77620ebf9bcf7322/icon.png",
-        "packageName": "com.doublep.wakey",
-        "mainActivity": ".Bulb",
-        "versionCode": "18",
-        "versionName": "2.3"
-    },
-    "success": true
-}
-```
 
 ## Thanks
+- <https://github.com/openstf>
+- <https://github.com/Genymobile/scrcpy>
 - [https://www.easyicon.net](https://www.easyicon.net/iconsearch/hub/)
 - <https://github.com/mikusjelly/apkutils>
 - <https://github.com/gtsystem/python-remotezip>

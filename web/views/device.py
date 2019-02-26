@@ -64,7 +64,7 @@ class APIUserDeviceHandler(BaseRequestHandler):
             })
 
 
-class DeviceControlHandler(BaseRequestHandler):
+class AndroidDeviceControlHandler(BaseRequestHandler):
     """ device remote control """
 
     async def get(self, udid):
@@ -125,7 +125,7 @@ class DeviceItemHandler(BaseRequestHandler):
 
 class AppleDeviceListHandler(BaseRequestHandler):
     def get(self):
-        self.render("apple.html")
+        self.render("applelist.html")
 
 
 class DeviceListHandler(BaseRequestHandler):

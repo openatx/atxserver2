@@ -6,7 +6,7 @@ import os
 from .views import LogoutHandler, MainHandler
 from .views.device import (DeviceChangesWSHandler, DeviceItemHandler,
                            DeviceListHandler, APIUserDeviceHandler,
-                           DeviceControlHandler, AppleDeviceListHandler)
+                           AndroidDeviceControlHandler, AppleDeviceListHandler)
 from .views.provider import ProviderHeartbeatWSHandler
 from .views.upload import UploadItemHandler, UploadListHandler
 from .views.user import APIUserHandler, UserHandler, APIUserGroupHandler, UserGroupCreateHandler
@@ -17,12 +17,13 @@ urlpatterns = [
     (r"/user/group_create", UserGroupCreateHandler),
     (r"/logout", LogoutHandler),
     (r"/uploads", UploadListHandler),
-    (r"/uploads/(.*)", UploadItemHandler,
-        {'path': os.path.join(os.getcwd(), 'uploads')}),
+    (r"/uploads/(.*)", UploadItemHandler, {
+        'path': os.path.join(os.getcwd(), 'uploads')
+    }),
     (r"/apples", AppleDeviceListHandler),
     (r"/devices", DeviceListHandler),
     (r"/devices/([^/]+)", DeviceItemHandler),
-    (r"/devices/([^/]+)/remotecontrol", DeviceControlHandler),
+    (r"/devices/([^/]+)/remotecontrol", AndroidDeviceControlHandler),
     (r"/websocket/devicechanges", DeviceChangesWSHandler),
     (r"/websocket/heartbeat", ProviderHeartbeatWSHandler),
     # For compability of atx-server-1
