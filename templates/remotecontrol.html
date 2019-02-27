@@ -173,12 +173,26 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="col-6"></div>
+                        <div class="col-6">
+                            <div class="card">
+                                <div class="card-header">
+                                    <i class="fa fa-globe"></i>
+                                    浏览器打开URL
+                                </div>
+                                <div class="card-body">
+                                    <textarea class="form-control" placeholder="在这里输入URL" rows=3 v-model="browserURL"
+                                        @keyup.enter="openBrowser(browserURL)"></textarea>
+                                    <div style="padding-top: 5px">
+                                        <button type="button" class="btn btn-primary float-right"
+                                            @click='openBrowser(browserURL)'>打开</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                         <div class="col-6"></div>
                         <div class="col-6"></div>
                         <div class="col-6"></div>
                     </div>
-
                 </el-tab-pane>
                 <el-tab-pane label="Terminal" name="terminal">
                     <p><code>Ctrl+Ins</code>复制，<code>Shift+Ins</code>粘贴</p>
@@ -274,9 +288,15 @@
                         touchpad: null,
                     },
                     imagePool: new ImagePool(100),
+                    browserURL: "",
                 }, ret.data),
-
                 methods: {
+                    openBrowser(url) {
+                        if (!/^https?:\/\//.test(url)) {
+                            url = "http://" + url;
+                        }
+                        return this.runShell("am start -a android.intent.action.VIEW -d " + url);
+                    },
                     runShell(command) {
                         return $.ajax({
                             method: "get",
