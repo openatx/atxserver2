@@ -25,25 +25,26 @@ class CurrentUserMixin(object):
         Refs: https://www.tornadoweb.org/en/stable/guide/security.html#user-authentication
         """
         id = self.get_secure_cookie("user_id")  # here is bytes not str
-        # print("ID:", id)
         if id:
             id = id.decode()
-        return self.bunchify(await db.users.get(id) if id else None)
+        return self.bunchify(await db.table("users").get(id) if id else None)
 
     async def set_current_user(self, email: str, username: str):
-        ret = await db.users.save({"email": email, "username": username})
+        ret = await db.table("users").save({
+            "email": email,
+            "username": username
+        })
         if ret['inserted']:
-            await db.users.save({
+            await db.table("users").save({
                 "secretKey": "S:" + str(uuid.uuid4()),
                 "createdAt": time_now(),
                 "lastLoggedInAt": time_now(),
             }, ret['id'])
         elif ret['unchanged']:
-            await db.users.save({
+            await db.table("users").save({
                 "lastLoggedInAt": time_now(),
             }, ret['id'])
 
-        # print("RET:", ret)
         self.set_secure_cookie("user_id", ret['id'])
 
 
