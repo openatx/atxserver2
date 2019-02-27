@@ -69,7 +69,9 @@ class AndroidDeviceControlHandler(AuthRequestHandler):
     """ device remote control """
 
     async def get(self, udid):
-        device = await db.table("devices").get(udid)
+        print("Request", udid)
+        device = await db.table("devices").get(udid).run()
+        print(device)
         if not device:
             self.render("error.html", message="404 Device not found")
             return
@@ -98,7 +100,7 @@ class DeviceItemHandler(AuthRequestHandler):
         pass
 
     async def get_json(self, id):
-        data = await db.table("devices").get(id)
+        data = await db.table("devices").get(id).run()
         if not data:
             self.set_status(400)  # bad request
             self.write_json({
@@ -186,7 +188,7 @@ async def occupy_device(email: str, udid: str):
     Raises:
         OccupyError
     """
-    device = await db.table("devices").get(udid)
+    device = await db.table("devices").get(udid).run()
     if not device:
         raise OccupyError("device not exist")
     if not device.get('present'):
@@ -197,25 +199,23 @@ async def occupy_device(email: str, udid: str):
             return
         raise OccupyError("device busy")
 
-    ret = await db.table("devices").update({"using": True}, udid)
+    ret = await db.table("devices").get(udid).update({"using": True})
     if ret['skipped'] == 1:
         raise OccupyError(
             "not fast enough, device have been taken from others")
-    await db.table("devices").update({
-        "udid": udid,
+    await db.table("devices").get(udid).update({
         "userId": email,
         "usingBebanAt": time_now()
     })
 
 
 async def release_device(email: str, udid: str):
-    device = await db.table("devices").get(udid)
+    device = await db.table("devices").get(udid).run()
     if not device:
         raise ReleaseError("device not exist")
     if device.get('userId') != email:
         raise ReleaseError("device is not owned by you")
-    await db.table("devices").update({
-        "udid": udid,
+    await db.table("devices").get(udid).update({
         "using": False,
         "userId": None
     })

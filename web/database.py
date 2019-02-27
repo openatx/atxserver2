@@ -110,10 +110,10 @@ class TableHelper(object):
     From
         await with r.connect() as conn:
             await conn.run(r.table("users").delete())
-    
+
     To
         await db.table("users").delete()
-    
+
     More simple examples:
         ret = await db.table("users").filter({"present": True}).delete()
         ret = await db.table("users").insert({"name": "hello world"})
@@ -140,7 +140,7 @@ class TableHelper(object):
 
     def get(self, *args, **kwargs):
         reql = self.__reql.get(*args, **kwargs)
-        return self.__db.run(reql)
+        return self.clone(reql=reql)
 
     def update(self, *args, **kwargs):
         reql = self.__reql.update(*args, **kwargs)
@@ -173,7 +173,7 @@ class TableHelper(object):
 
     async def all(self):
         """Retrive all the matches
-        
+
         Returns:
             list of item
         """

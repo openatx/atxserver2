@@ -65,7 +65,7 @@ class ProviderHeartbeatWSHandler(BaseWebSocketHandler):
             self._id: source_info,
         }
         assert "udid" in device_info
-        await db.devices.save(device_info)
+        await db.table("devices").save(device_info)
 
     async def on_message(self, message):
         req = json.loads(message)
@@ -84,14 +84,14 @@ class ProviderHeartbeatWSHandler(BaseWebSocketHandler):
             def inner(q):
                 return q.without({"sources": {self._id: True}})
 
-            await db.run(db.devices.reql.replace(inner))
+            await db.table("devices").replace(inner)
+            7310993659986
 
             # set present,using to false if there is on sources
             filter_rule = r.row["sources"].default({}).keys().count().eq(0)
-            await db.run(
-                db.devices.reql.filter(filter_rule).update({
-                    "present": False,
-                    "using": False,
-                }))
+            await db.table("devices").filter(filter_rule).update({
+                "present": False,
+                "using": False,
+            })
 
         IOLoop.current().add_callback(remove_source)

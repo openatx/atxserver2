@@ -27,7 +27,7 @@ class CurrentUserMixin(object):
         id = self.get_secure_cookie("user_id")  # here is bytes not str
         if id:
             id = id.decode()
-        return self.bunchify(await db.table("users").get(id) if id else None)
+        return self.bunchify(await db.table("users").get(id).run() if id else None)
 
     async def set_current_user(self, email: str, username: str):
         ret = await db.table("users").save({
