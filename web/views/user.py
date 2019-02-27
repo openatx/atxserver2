@@ -43,14 +43,13 @@ class APIUserHandler(AuthRequestHandler):
         def merge_function(v):
             return {"auth": v.get_field("members")[user_email]}
 
-        cursor = await db.run(
-            db.table("groups").reql.filter(
-                r.row.has_fields({"members": {
-                    user_email: True,
-                }})).merge(merge_function).without("members"))
-        groups = []
-        while await cursor.fetch_next():
-            groups.append(await cursor.next())
+        groups = await db.table("groups").filter(
+            r.row.has_fields({"members": {
+                user_email: True,
+            }})).merge(merge_function).without("members").all()
+        # groups = []
+        # while await cursor.fetch_next():
+        #     groups.append(await cursor.next())
         user = self.current_user.copy()
         user["groups"] = groups
         self.write_json(user)
@@ -67,23 +66,20 @@ class UserGroupCreateHandler(AuthRequestHandler):
 
 class APIUserGroupHandler(AuthRequestHandler):
     def get(self):
-        # db.table("groups").reql.filter()
         pass
 
     async def post(self):
         id = self.get_argument("id")
         name = self.get_argument("name")
-        ret = await db.run(
-            db.table("groups").reql.insert({
-                "id": id,
-                "name": name,
-                "createdAt": time_now(),
-                "creator": self.current_user.email,
-                "members": {
-                    self.current_user.email: {
-                        "admin": True,
-                    }
+        ret = await db.table("groups").insert({
+            "id": id,
+            "name": name,
+            "createdAt": time_now(),
+            "creator": self.current_user.email,
+            "members": {
+                self.current_user.email: {
+                    "admin": True,
                 }
-            }))
-        print(ret)
+            }
+        })
         self.write_json(ret)

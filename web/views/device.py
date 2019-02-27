@@ -3,6 +3,7 @@
 
 import json
 
+import rethinkdb as r
 from logzero import logger
 from tornado.web import authenticated
 
@@ -131,25 +132,26 @@ class AppleDeviceListHandler(AuthRequestHandler):
 class DeviceListHandler(AuthRequestHandler):
     """ Device List will show in first page """
 
-    @authenticated
     async def get(self):
         """ get data from database """
         if self.is_json_request or self.request.path == "/list":
+            devices = await db.table("devices").order_by(
+                r.desc("createdAt")).all()
             self.write_json({
                 "success": True,
                 "data": {
-                    "devices": await db.table("devices").get_all(limit=50, desc="createdAt"),
+                    "devices": devices,
                     "count": await db.table("devices").count(),
                 }
             })  # yapf: disable
             return
         self.render("index.html")
 
-    async def post(self):
-        """ add data into database """
-        data = jsondate.loads(self.request.body)
-        id = await db.table("devices").save(data)
-        self.write_json({"id": id, "data": data})
+    # async def put(self):
+    #     """ modify data in database """
+    #     data = jsondate.loads(self.request.body)
+    #     ret = await db.table("devices").save(data)
+    #     self.write_json({"success": True, "data": ret})
 
 
 class DeviceChangesWSHandler(BaseWebSocketHandler):
@@ -184,7 +186,7 @@ async def occupy_device(email: str, udid: str):
     Raises:
         OccupyError
     """
-    device = await db.devices.get(udid)
+    device = await db.table("devices").get(udid)
     if not device:
         raise OccupyError("device not exist")
     if not device.get('present'):
@@ -195,23 +197,28 @@ async def occupy_device(email: str, udid: str):
             return
         raise OccupyError("device busy")
 
-    ret = await db.devices.update({"using": True}, udid)
+    ret = await db.table("devices").update({"using": True}, udid)
     if ret['skipped'] == 1:
         raise OccupyError(
             "not fast enough, device have been taken from others")
-    await db.devices.update({
+    await db.table("devices").update({
+        "udid": udid,
         "userId": email,
         "usingBebanAt": time_now()
-    }, udid)
+    })
 
 
 async def release_device(email: str, udid: str):
-    device = await db.devices.get(udid)
+    device = await db.table("devices").get(udid)
     if not device:
         raise ReleaseError("device not exist")
     if device.get('userId') != email:
         raise ReleaseError("device is not owned by you")
-    await db.devices.update({"using": False, "userId": None}, udid)
+    await db.table("devices").update({
+        "udid": udid,
+        "using": False,
+        "userId": None
+    })
 
 
 class DeviceBookWSHandler(BaseWebSocketHandler):
