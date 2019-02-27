@@ -11,9 +11,7 @@ from tornado.web import authenticated
 from tornado.escape import json_decode
 
 from ..database import db, time_now
-from ..utils import jsondate_dumps
-
-_user_db = {}
+from ..libs import jsondate
 
 
 class CurrentUserMixin(object):
@@ -61,7 +59,7 @@ class BaseRequestHandler(CurrentUserMixin, tornado.web.RequestHandler):
     def write_json(self, data):
         assert isinstance(data, dict)
         self.set_header("Content-Type", "application/json; charset=utf-8")
-        content = jsondate_dumps(data)
+        content = jsondate.dumps(data)
         self.write(content)
 
     def get_payload(self):

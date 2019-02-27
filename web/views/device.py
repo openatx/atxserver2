@@ -6,9 +6,9 @@ import json
 from logzero import logger
 from tornado.web import authenticated
 
-from ..database import db, jsondate_loads, time_now
-from ..utils import jsondate_dumps
-from .base import BaseRequestHandler, BaseWebSocketHandler, AuthRequestHandler
+from ..database import db, time_now
+from ..libs import jsondate
+from .base import AuthRequestHandler, BaseWebSocketHandler
 
 
 class OccupyError(Exception):
@@ -19,7 +19,7 @@ class ReleaseError(Exception):
     pass
 
 
-class APIUserDeviceHandler(BaseRequestHandler):
+class APIUserDeviceHandler(AuthRequestHandler):
     """ device Acquire and Release """
 
     async def get(self):
@@ -64,7 +64,7 @@ class APIUserDeviceHandler(BaseRequestHandler):
             })
 
 
-class AndroidDeviceControlHandler(BaseRequestHandler):
+class AndroidDeviceControlHandler(AuthRequestHandler):
     """ device remote control """
 
     async def get(self, udid):
@@ -92,7 +92,7 @@ class AndroidDeviceControlHandler(BaseRequestHandler):
         self.render("remotecontrol.html", udid=udid)
 
 
-class DeviceItemHandler(BaseRequestHandler):
+class DeviceItemHandler(AuthRequestHandler):
     async def put(self, id):
         pass
 
@@ -123,12 +123,12 @@ class DeviceItemHandler(BaseRequestHandler):
         self.write("No such html")
 
 
-class AppleDeviceListHandler(BaseRequestHandler):
+class AppleDeviceListHandler(AuthRequestHandler):
     def get(self):
         self.render("applelist.html")
 
 
-class DeviceListHandler(BaseRequestHandler):
+class DeviceListHandler(AuthRequestHandler):
     """ Device List will show in first page """
 
     @authenticated
@@ -147,14 +147,14 @@ class DeviceListHandler(BaseRequestHandler):
 
     async def post(self):
         """ add data into database """
-        data = jsondate_loads(self.request.body)
+        data = jsondate.loads(self.request.body)
         id = await db.table("devices").save(data)
         self.write_json({"id": id, "data": data})
 
 
 class DeviceChangesWSHandler(BaseWebSocketHandler):
     def write_json(self, data):
-        self.ws_connection.write_message(jsondate_dumps(data))
+        self.ws_connection.write_message(jsondate.dumps(data))
 
     async def open(self):
         self.__opened = True

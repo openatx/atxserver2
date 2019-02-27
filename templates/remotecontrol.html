@@ -128,7 +128,7 @@
     <div class="row grow-1">
         <div class="col-sm debugarea d-flex flex-column justify-content-center nopadding grow-0">
             <section class="debugarea" style="height: 2rem; line-height: 2rem; justify-self: start">
-                {{!udid}}
+                {{!properties.serial}}
                 <span>
                     <i v-if="displayLinked" @click="closeMirrorDisplay" class="fas fa-link" style="color: green"></i>
                     <i v-else @click="mirrorDisplay" class="fas fa-unlink" style="color: red"></i>
@@ -295,6 +295,7 @@
                         if (!/^https?:\/\//.test(url)) {
                             url = "http://" + url;
                         }
+                        this.browserURL = ""
                         return this.runShell("am start -a android.intent.action.VIEW -d " + url);
                     },
                     runShell(command) {
@@ -563,6 +564,13 @@
                             }))
                         }
 
+                        function touchWait(millseconds) {
+                            ws.send(JSON.stringify({
+                                operation: 'w',
+                                milliseconds: millseconds,
+                            }))
+                        }
+
                         function touchUp(index) {
                             ws.send(JSON.stringify({
                                 operation: 'u',
@@ -698,6 +706,7 @@
                             touchCommit()
 
                             wheel.key = setTimeout(() => { // wheel stopped do mouse up
+                                touchWait(100);
                                 touchUp()
                                 touchCommit()
                                 wheel.key = null;

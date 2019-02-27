@@ -10,27 +10,18 @@ from xml.dom import minidom
 from apkutils import APK, apkfile
 
 
-def _data_handler(obj):
-    return obj.isoformat() if hasattr(obj, "isoformat") else obj
-
-
-def jsondate_dumps(data):
-    assert isinstance(data, dict)
-    return json.dumps(data, default=_data_handler)
-
-
 class Manifest(object):
     def __init__(self, apk: APK):
         content = apk.get_org_manifest()
         self._dom = minidom.parseString(content)
         self._permissions = None
         self._apk = apk
-    
+
     @property
     def icon_path(self):
         return self._apk.get_app_icon()
 
-    def save_icon(self, icon_path:str):
+    def save_icon(self, icon_path: str):
         """
         Args:
             icon_path (str): should endwith .png
@@ -89,7 +80,7 @@ class Manifest(object):
         return None
 
 
-def parse_apkfile(file:str) -> Manifest:
+def parse_apkfile(file: str) -> Manifest:
     '''
     Args:
         - file: filename
@@ -106,7 +97,7 @@ def remove_useless_apk():
     
     tornado.ioloop.PeriodicCallback(remove_useless_apk, 60 * 1000).start() # milliseconds, equals to 10 minutes
     """
-    abandon_timeline = time.time() - 60*60*24*10 # 10 days
+    abandon_timeline = time.time() - 60 * 60 * 24 * 10  # 10 days
     for root, dirs, files in os.walk("uploads"):
         for file in files:
             if not file.endswith('.apk'):
@@ -120,7 +111,7 @@ def remove_useless_apk():
                 print("remove", path)
             except PermissionError as e:
                 print("remove err", path, str(e))
-                
+
         # finally cleanup
         if not os.listdir(root):
             print("remove empty dir", root)

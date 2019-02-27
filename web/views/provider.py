@@ -10,7 +10,7 @@ from logzero import logger
 
 import rethinkdb as r
 from ..database import db, time_now
-from .base import BaseRequestHandler, BaseWebSocketHandler
+from .base import BaseWebSocketHandler
 
 
 class ProviderHeartbeatWSHandler(BaseWebSocketHandler):

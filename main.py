@@ -10,7 +10,7 @@ import tornado.ioloop
 from logzero import logger
 from tornado.log import enable_pretty_logging
 
-from web import make_app
+from web.entry import make_app
 from web.database import db
 from web.views import OpenIdLoginHandler, SimpleLoginHandler
 

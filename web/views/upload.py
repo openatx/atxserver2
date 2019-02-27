@@ -10,7 +10,7 @@ from tornado import gen
 from tornado.web import stream_request_body, StaticFileHandler
 
 from ..utils import parse_apkfile
-from .base import BaseRequestHandler
+from .base import AuthRequestHandler
 from .multipart_streamer import MultiPartStreamer
 
 
@@ -23,7 +23,7 @@ class UploadItemHandler(StaticFileHandler):
 
 
 @stream_request_body
-class UploadListHandler(BaseRequestHandler):  # replace UploadListHandler
+class UploadListHandler(AuthRequestHandler):  # replace UploadListHandler
     async def prepare(self):
         await super().prepare()
 

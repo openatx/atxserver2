@@ -5,15 +5,15 @@ from tornado.web import authenticated
 import rethinkdb as r
 
 from ..database import db, time_now
-from .base import BaseRequestHandler
+from .base import AuthRequestHandler
 
 
-class UserHandler(BaseRequestHandler):
+class UserHandler(AuthRequestHandler):
     def get(self):
         self.render("user.html")
 
 
-class APIUserHandler(BaseRequestHandler):
+class APIUserHandler(AuthRequestHandler):
     async def get(self):
         """
         Return:
@@ -60,12 +60,12 @@ class APIUserHandler(BaseRequestHandler):
         pass
 
 
-class UserGroupCreateHandler(BaseRequestHandler):
+class UserGroupCreateHandler(AuthRequestHandler):
     def get(self):
         self.render("group_create.html")
 
 
-class APIUserGroupHandler(BaseRequestHandler):
+class APIUserGroupHandler(AuthRequestHandler):
     def get(self):
         # db.table("groups").reql.filter()
         pass

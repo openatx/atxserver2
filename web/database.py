@@ -8,27 +8,11 @@ import rethinkdb as r
 from logzero import logger
 
 from . import settings
+from .libs import jsondate
 
 
 def time_now():
     return datetime.datetime.now(r.make_timezone("+08:00"))
-
-
-def _json_decoder(d):
-    for key, val in d.items():
-        if val == '':
-            continue
-        try:
-            obj = datetime.datetime.fromisoformat(val)
-            d[key] = obj.astimezone(r.make_timezone("+08:00"))
-        except (ValueError, TypeError):
-            continue
-
-    return d
-
-
-def jsondate_loads(s):
-    return json.loads(s, object_hook=_json_decoder)
 
 
 class DB(object):
@@ -109,6 +93,103 @@ class DB(object):
             raise AttributeError("database table not exist", name)
         tbl = self.__tables[name]
         return DBTable(self, tbl['name'], primary_key=tbl.get('primary_key'))
+
+
+class TableHelper(object):
+    """
+    简化rethinkdb的代码
+
+    From
+        await with r.connect() as conn:
+            await conn.run(r.table("users").delete())
+    
+    To
+        await db.table("users").delete()
+    
+    More simple examples:
+        ret = await db.table("users").filter({"present": True}).delete()
+        ret = await db.table("users").insert({"name": "hello world"})
+    """
+
+    def __init__(self, db, reql, pkey='id'):
+        self.__db = db
+        self.__reql = reql
+        self.__pkey = pkey
+
+    def clone(self, db=None, reql=None, pkey=None):
+        db = db or self.__db
+        reql = reql or self.__reql
+        pkey = pkey or self.__pkey
+        return TableHelper(db, reql, pkey)
+
+    def get(self, *args, **kwargs):
+        reql = self.__reql.get(*args, **kwargs)
+        return self.clone(reql=reql)
+
+    def filter(self, *args, **kwargs):
+        reql = self.__reql.filter(*args, **kwargs)
+        return self.clone(reql=reql)
+
+    def update(self, *args, **kwargs):
+        reql = self.__reql.update(*args, **kwargs)
+        return self.__db.run(reql)
+
+    def insert(self, *args, **kwargs):
+        reql = self.__reql.insert(*args, **kwargs)
+        return self.__db.run(reql)
+
+    def delete(self, *args, **kwargs):
+        reql = self.__reql.delete(*args, **kwargs)
+        return self.__db.run(reql)
+
+    def replace(self, *args, **kwargs):
+        reql = self.__reql.replace(*args, **kwargs)
+        return self.__db.run(reql)
+
+    def run(self):
+        return self.__db.run(self.__reql)
+
+    async def watch(self):
+        """ return (conn, feed) """
+        conn = await self.__db.connection()
+        feed = await self.__reql.changes().run(conn)
+        return conn, feed
+
+    async def save(self, data: dict, id=None) -> dict:
+        data = data.copy()
+        if id:
+            data[self.__pkey] = id
+
+        # update if has primary_key
+        if self.__pkey in data:
+            id = data[self.__pkey]
+            ret = await self.get(id).update(data)
+            if not ret['skipped']:
+                ret['id'] = id
+                return ret
+
+        # add some data
+        data['createdAt'] = time_now()
+
+        ret = await self.insert(data)
+        assert ret['errors'] == 0
+
+        if "generated_keys" in ret:
+            ret['id'] = ret["generated_keys"][0]
+            return ret
+
+        ret['id'] = id
+        return ret
+
+    def __getitem__(self, key):
+        if hasattr(self.__reql, key):
+
+            def inner(*args, **kwargs):
+                reql = getattr(self.__reql, key)(*args, **kwargs)
+                return self.clone(reql=reql)
+
+            return inner
+        raise AttributeError("No such attribute " + key)
 
 
 class DBTable(object):
