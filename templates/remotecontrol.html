@@ -84,10 +84,6 @@
 </style>
 {% end %}
 
-{% block navbarlinks %}
-<a class="nav-item nav-link active" href="/">
-    <i class="fas fa-list-alt"></i> 设备控制</a>
-{% end %}
 {% block nav %}
 <nav class="navbar sticky-top navbar-expand-lg navbar-dark bg-dark">
     <div class="container-fluid">
@@ -98,10 +94,6 @@
             <div class="navbar-nav">
                 <a class="nav-item nav-link active" href="/">
                     <i class="fas fa-list-alt"></i> 设备控制</a>
-                <a class="nav-item nav-link" href="/devices">
-                    设备列表</a>
-                <a class="nav-item nav-link" href="/uploads">
-                    文件上传</a>
                 <!-- <a class="nav-item nav-link active" href='/'> -->
                 <!-- </a> -->
             </div>
@@ -116,6 +108,12 @@
                         <a class="dropdown-item" href="/logout">Logout</a>
                     </div>
                 </div>
+                <form class="form-inline">
+                    <button class="btn btn-warning" type="button" @click="stopUsing">停止使用</button>
+                    <span ref="usingTime" class="navbar-text" style="margin-left: 1em">
+                        使用时长
+                    </span>
+                </form>
             </div>
         </div>
 
@@ -196,7 +194,37 @@
                                 </div>
                             </div>
                         </div>
-                        <div :class="tabColumnStyle"></div>
+                        <div :class="tabColumnStyle">
+                            <div class="card bottom-gutter">
+                                <div class="card-header">
+                                    <i class="fa fa-dashboard"></i>
+                                    快捷入口
+                                </div>
+                                <div class="card-body">
+                                    <button class="btn btn-outline-primary"
+                                        @click="runShell('am start -a android.settings.SETTINGS')">
+                                        <i class="fas fa-cog"></i>
+                                        Settings
+                                    </button>
+                                    <button class="btn btn-outline-primary"
+                                        @click="runShell('am start -a com.android.settings.APPLICATION_DEVELOPMENT_SETTINGS')">
+                                        <i class="fas fa-wrench"></i>
+                                        开发者
+                                    </button>
+                                    <button class="btn btn-outline-primary"
+                                        @click="runShell('am start -a android.settings.WIRELESS_SETTINGS')">
+                                        <i class="fas fa-wifi"></i>
+                                        WIFI
+                                    </button>
+                                    <button class="btn btn-outline-primary"
+                                        @click="runShell('am start -n com.tencent.tmgp.sgame/.SGameActivity')">
+                                        <i class="fas fa-gamepad"></i>
+                                        王者荣耀
+                                    </button>
+                                    <!-- more https://stackoverflow.com/questions/38051706/i-am-trying-to-launch-settings-through-adb-using-the-adb-monkey-command-but-it-->
+                                </div>
+                            </div>
+                        </div>
                         <div :class="tabColumnStyle"></div>
                         <div :class="tabColumnStyle"></div>
                     </div>
@@ -281,7 +309,7 @@
             closeWindowWhenReleased()
 
             vm = new Vue({
-                el: "#app",
+                el: "#content-wrapper",
                 data: Object.assign({
                     activeName: 'common',
                     canvas: {
@@ -291,7 +319,8 @@
                     canvasStyle: {
                         opacity: 1,
                         width: '400px',
-                        height: '200px'
+                        height: '200px',
+                        maxHeight: "unset",
                     },
                     rotation: 0,
                     term: null, // Terminal object
@@ -304,6 +333,15 @@
                     tabColumnStyle: 'col-6',
                 }, ret.data),
                 methods: {
+                    stopUsing() {
+                        $.ajax({
+                            method: "delete",
+                            url: "/api/v1/user/devices/" + this.udid,
+                            dataType: "json"
+                        }).then(ret => {
+                            window.close()
+                        })
+                    },
                     openBrowser(url) {
                         if (!/^https?:\/\//.test(url)) {
                             url = "http://" + url;
@@ -691,6 +729,7 @@
                         let wheel = {
                             count: 0,
                             key: null,
+                            mouseY: null,
                         };
 
                         function mouseWheelListener(event) {
@@ -705,21 +744,31 @@
                             let pressure = 0.5
 
                             if (wheel.key === null) { // mouse down
+                                wheel.mouseY = y;
                                 touchDown(1, x, y, pressure)
                                 touchCommit()
                             } else {
                                 clearTimeout(wheel.key)
                             }
 
-                            // mouse move
+                            // 从 wheel.mouseY --> targetY 分10步移动完
                             wheel.count += 1
+                            const stepCount = 10; // 10 steps
                             const direction = e.deltaY > 0 ? -1 : 1
                             const offsetY = wheel.count * direction * 0.2 * screen.bounds.h
-                            touchMove(1, x, y + offsetY, pressure)
-                            touchCommit()
+                            const targetY = Math.max(0, Math.min(y + offsetY, screen.bounds.h))
+
+                            let mouseY = wheel.mouseY;
+                            const stepY = (targetY - mouseY) / stepCount;
+                            for (let i = 0; i < stepCount; i += 1) {
+                                mouseY += stepY;
+                                touchWait(10); // 间隔10ms
+                                touchMove(1, x, mouseY, pressure)
+                                touchCommit()
+                            }
+                            wheel.mouseY = targetY; // 记录当前点的位置
 
                             wheel.key = setTimeout(() => { // wheel stopped do mouse up
-                                touchWait(100);
                                 touchUp()
                                 touchCommit()
                                 wheel.key = null;
@@ -739,9 +788,12 @@
                     },
                     fitCanvas(canvas) {
                         if (canvas.width > canvas.height) {
+                            // 横屏显示，宽高相等
+                            this.canvasStyle.maxHeight = canvas.parentElement.clientHeight + "px";
                             this.canvasStyle.height = "auto"
                             this.canvasStyle.width = canvas.parentElement.clientHeight + "px"
                         } else {
+                            this.canvasStyle.maxHeight = "unset"
                             this.canvasStyle.height = canvas.parentElement.clientHeight + "px"
                             this.canvasStyle.width = "auto"
                         }
@@ -830,6 +882,12 @@
                             this.syncTouchpad()
                         }
                     })
+
+                    // 更新使用时间
+                    setInterval(() => {
+                        let duration = moment.now() - moment(this.usingBeganAt)
+                        this.$refs.usingTime.innerHTML = moment.utc(duration).format("HH:mm:ss")
+                    }, 1000)
                 },
                 computed: {
                     deviceUrl() {

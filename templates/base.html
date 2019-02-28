@@ -60,33 +60,33 @@
                 </button>
             </div>
         </nav>
+
+        <script>
+            new Vue({
+                el: "#navbarNavDropdown",
+                data: {
+                    links: [{
+                        path: "/devices",
+                        name: "安卓设备",
+                        icon: ["fab", "fa-android"]
+                    }, {
+                        path: "/apples",
+                        name: "苹果设备",
+                        icon: ["fab", "fa-apple"]
+                    }, {
+                        path: "/uploads",
+                        name: "文件上传",
+                        icon: ["fas fa-cloud-upload-alt"]
+                    }],
+                    activePath: location.pathname,
+                }
+            })
+        </script>
         {% end %}
         <div id="app">
             {% block content %}{% end %}
         </div>
     </div>
-
-    <script>
-        new Vue({
-            el: "#navbarNavDropdown",
-            data: {
-                links: [{
-                    path: "/devices",
-                    name: "安卓设备",
-                    icon: ["fab", "fa-android"]
-                }, {
-                    path: "/apples",
-                    name: "苹果设备",
-                    icon: ["fab", "fa-apple"]
-                }, {
-                    path: "/uploads",
-                    name: "文件上传",
-                    icon: ["fas fa-cloud-upload-alt"]
-                }],
-                activePath: location.pathname,
-            }
-        })
-    </script>
 
     {% block script %}
     <script>

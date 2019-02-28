@@ -203,7 +203,7 @@ async def occupy_device(email: str, udid: str):
             "not fast enough, device have been taken from others")
     await db.table("devices").get(udid).update({
         "userId": email,
-        "usingBebanAt": time_now()
+        "usingBeganAt": time_now()
     })
 
 
