@@ -69,9 +69,7 @@ class AndroidDeviceControlHandler(AuthRequestHandler):
     """ device remote control """
 
     async def get(self, udid):
-        print("Request", udid)
         device = await db.table("devices").get(udid).run()
-        print(device)
         if not device:
             self.render("error.html", message="404 Device not found")
             return

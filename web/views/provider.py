@@ -84,14 +84,14 @@ class ProviderHeartbeatWSHandler(BaseWebSocketHandler):
             def inner(q):
                 return q.without({"sources": {self._id: True}})
 
+            #
             await db.table("devices").replace(inner)
-            7310993659986
 
-            # set present,using to false if there is on sources
+            # set present,using to false if there is no sources
             filter_rule = r.row["sources"].default({}).keys().count().eq(0)
             await db.table("devices").filter(filter_rule).update({
                 "present": False,
                 "using": False,
-            })
+            }) # yapf: disable
 
         IOLoop.current().add_callback(remove_source)

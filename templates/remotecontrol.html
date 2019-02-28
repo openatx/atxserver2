@@ -77,6 +77,10 @@
     .terminal {
         border: 5px solid black;
     }
+
+    .bottom-gutter {
+        margin-bottom: 10px;
+    }
 </style>
 {% end %}
 
@@ -141,7 +145,7 @@
 
             </section>
             <section class="screen debugarea d-flex grow-1 align-items-center justify-content-center"
-                style="line-height: 0px">
+                style="line-height: 0px" @dblclick="runKeyevent('WAKEUP')">
                 <!-- <canvas ref="fgCanvas" class="canvas-fg" v-bind:style="canvasStyle"></canvas> -->
                 <canvas ref="bgCanvas" class="canvas-bg" v-bind:style="canvasStyle"></canvas>
                 <span class="finger finger-0" style="transform: translate3d(200px, 100px, 0px)"></span>
@@ -149,22 +153,25 @@
                 <!-- <img style="z-index: 10" v-if="loading" src="/assets/loading.svg"> -->
             </section>
             <section class="footer d-flex justify-content-around debugarea">
-                <button class="btn btn-default grow-1" @click="runKeyevent('BACK')">
-                    <i class="fas fa-chevron-left"></i>
-                </button>
-                <button class="btn btn-default grow-1" @click="runKeyevent('HOME')">
-                    <i class="fas fa-home"></i>
+                <button class="btn btn-default grow-1" @click="runKeyevent('APP_SWITCH')">
+                    <i class="fas fa-window-restore"></i>
                 </button>
                 <button class="btn btn-default grow-1" @click="runKeyevent('MENU')">
                     <i class="fas fa-bars"></i></button>
+                <button class="btn btn-default grow-1" @click="runKeyevent('HOME')">
+                    <i class="fas fa-home"></i>
+                </button>
+                <button class="btn btn-default grow-1" @click="runKeyevent('BACK')">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
             </section>
         </div>
         <div class="col-sm debugarea" style="overflow-y: auto">
             <el-tabs v-model="activeName" @tab-click="handleTabClick">
                 <el-tab-pane label="常用" name="common">
-                    <div class="row">
-                        <div class="col-6">
-                            <div class="card">
+                    <div ref="commonContainer" class="row">
+                        <div :class="tabColumnStyle">
+                            <div class="card bottom-gutter">
                                 <div class="card-header">
                                     ATX
                                 </div>
@@ -173,8 +180,8 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="col-6">
-                            <div class="card">
+                        <div :class="tabColumnStyle">
+                            <div class="card bottom-gutter">
                                 <div class="card-header">
                                     <i class="fa fa-globe"></i>
                                     浏览器打开URL
@@ -189,9 +196,9 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="col-6"></div>
-                        <div class="col-6"></div>
-                        <div class="col-6"></div>
+                        <div :class="tabColumnStyle"></div>
+                        <div :class="tabColumnStyle"></div>
+                        <div :class="tabColumnStyle"></div>
                     </div>
                 </el-tab-pane>
                 <el-tab-pane label="Terminal" name="terminal">
@@ -217,6 +224,11 @@
                                 <term-snippet :term="term" command="input keyevent 224"></term-snippet>
                                 熄灭屏幕
                                 <term-snippet :term="term" command="input keyevent 223"></term-snippet>
+                            </li>
+                            <li>
+                                minicap
+                                <term-snippet :term="term"
+                                    command="LD_LIBRARY_PATH=/data/local/tmp /data/local/tmp/minicap -i"></term-snippet>
                             </li>
                             <li>更多参考 <a href="https://github.com/mzlogin/awesome-adb" target="_blank">awesome-adb</a>
                             </li>
@@ -289,6 +301,7 @@
                     },
                     imagePool: new ImagePool(100),
                     browserURL: "",
+                    tabColumnStyle: 'col-6',
                 }, ret.data),
                 methods: {
                     openBrowser(url) {
@@ -793,6 +806,15 @@
 
                     new ResizeSensor(this.canvas.bg.parentElement, (e) => {
                         this.fitCanvas(this.canvas.bg)
+                    })
+
+                    // 常用功能面板 自适应
+                    new ResizeSensor(this.$refs.commonContainer, (e) => {
+                        if (e.width < 600) {
+                            this.tabColumnStyle = "col-12"
+                        } else {
+                            this.tabColumnStyle = "col-6"
+                        }
                     })
 
                     this.canvas.bg.addEventListener('contextmenu', event => event.preventDefault());
