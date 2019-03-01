@@ -140,6 +140,10 @@
                         style="color: green"></i>
                     <i v-else @click="syncTouchpad" class="far fa-hand-paper" style="color: red"></i>
                 </span>
+                <span @click="changeInputMethod">
+                    <i v-if="websockets.winput != null" class="fas fa-keyboard" style="color: green"></i>
+                    <i v-else class="fas fa-keyboard"></i>
+                </span>
                 <span>
                     <i @click="hotfix" title="hotfix" class="fas fa-hammer"></i>
                 </span>
@@ -255,18 +259,10 @@
                                             <i class="fas fa-keyboard"></i> 输入框
                                         </div>
                                         <div class="card-body">
-                                            <textarea ref="whatsinput" :disable="whatsinput.disabled"
+                                            <textarea ref="whatsinput" :disabled="whatsinput.disabled"
                                                 placeholder="输入点什么" class="form-control" v-model="whatsinput.text"
-                                                @input="syncWhatsinput"
-                                                @keydown.enter.prevent="syncInputKey(66)"></textarea>
-                                            <!-- <span style="padding-top: 5px" class="float-right">
-                                                <el-button-group>
-                                                    <el-button @click="sendInputAction('search')" size="mini"
-                                                        type="primary">
-                                                        搜索
-                                                    </el-button>
-                                                </el-button-group>
-                                            </span> -->
+                                                @input="sendInputText"
+                                                @keydown.enter.prevent="sendInputKey(66)"></textarea>
                                             <span
                                                 style="text-align: right; font-size: 0.74em; color: gray; margin-bottom: 0px">
                                                 Enter 快速输入</span>
@@ -400,7 +396,7 @@
                     },
                     whatsinput: {
                         text: "",
-                        disabled: false,
+                        disabled: true,
                     },
                     imagePool: new ImagePool(100),
                     browserURL: "",
@@ -416,12 +412,23 @@
                     }, {}),
                 }, ret.data),
                 methods: {
+                    changeInputMethod() {
+                        const inputMethod = "com.buscode.whatsinput/.WifiInputMethod"
+                        return this.runShell("ime enable " + inputMethod)
+                            .then(() => {
+                                return this.runShell("ime set " + inputMethod)
+                            })
+                            .then(() => {
+                                this.$refs.whatsinput.focus()
+                                return this.loadWhatsinput()
+                            })
+                    },
                     loadWhatsinput() {
                         console.log(this.whatsinputUrl)
                         let ws = new WebSocket(this.whatsinputUrl)
                         this.websockets.winput = ws;
                         ws.onopen = (ev) => {
-                            console.log("websocket connected")
+                            console.log("whatsinput connected")
                         }
                         ws.onmessage = (ev) => {
                             console.log("winput recv", ev)
@@ -429,6 +436,7 @@
                             switch (data.type) {
                                 case "InputStart":
                                     this.whatsinput.text = data.text;
+                                    this.whatsinput.disabled = false
                                     break;
                                 case "InputFinish":
                                     this.whatsinput.disabled = true
@@ -438,11 +446,17 @@
                                     break;
                             }
                         }
+                        ws.onerror = (ev) => {
+                            console.error(ev)
+                        }
                         ws.onclose = (ev) => {
                             console.log("winput closed")
+                            if (ws === this.websockets.winput) {
+                                this.websockets.winput = null;
+                            }
                         }
                     },
-                    syncWhatsinput() {
+                    sendInputText() {
                         console.log("sync", this.whatsinput.text)
                         let ws = this.websockets.winput;
                         ws.send(JSON.stringify({
@@ -450,7 +464,7 @@
                             text: this.whatsinput.text,
                         }))
                     },
-                    syncInputKey(key) {
+                    sendInputKey(key) {
                         console.log("Sync key", key)
                         let code = { "enter": "66" }[key] || key;
                         let ws = this.websockets.winput;
@@ -458,43 +472,6 @@
                             type: "InputKey",
                             code: "" + code,
                         }))
-                    },
-                    clearInputText() {
-                        const fastinput_ime = "com.github.uiautomator/.FastInputIME"
-                        return this.runShell("ime enable " + fastinput_ime)
-                            .pipe(() => {
-                                return this.runShell("ime set " + fastinput_ime)
-                            })
-                            .pipe(() => {
-                                return this.runShell("am broadcast -a ADB_CLEAR_TEXT")
-                            })
-                    },
-                    sendInputText(search, replace) {
-                        // Refs: https://github.com/openatx/android-uiautomator-server/blob/master/app/src/main/java/com/github/uiautomator/FastInputIME.java#L191
-                        const fastinput_ime = "com.github.uiautomator/.FastInputIME"
-                        return this.runShell("ime enable " + fastinput_ime)
-                            .pipe((ret) => {
-                                return this.runShell("ime set " + fastinput_ime)
-                            })
-                            .pipe((ret) => {
-                                let b64text = Base64.encode(this.whatsinput.text);
-                                let command = !!replace ? "ADB_SET_TEXT" : "ADB_INPUT_TEXT"
-                                return this.runShell("am broadcast -a " + command + " --es text " + b64text)
-                            })
-                            .pipe((ret) => {
-                                if (search === true) {
-                                    return this.runShell("am broadcast -a ADB_EDITOR_CODE --ei code 3")
-                                }
-                            })
-                            .pipe((ret) => {
-                                console.log("return", ret)
-                            })
-                    },
-                    sendInputAction(action) {
-                        let code = {
-                            "search": 3
-                        }[action.toLowerCase()] || action;
-                        return this.runShell("am broadcast -a ADB_EDITOR_CODE --ei code " + code)
                     },
                     loadUserSettings() {
                         return $.getJSON("/api/v1/user/settings").then(ret => {
