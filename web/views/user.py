@@ -59,6 +59,22 @@ class APIUserHandler(AuthRequestHandler):
         pass
 
 
+class APIUserSettingsHandler(AuthRequestHandler):
+    """ 用户设置 """
+
+    async def get(self):
+        user = await db.table("users").get(self.current_user.email).run()
+        self.write_json(user.get('settings', {}))
+
+    async def put(self):
+        payload = self.get_payload()
+        assert isinstance(payload, dict)
+        ret = await db.table("users").get(self.current_user.email).update({
+            "settings": payload,
+        }) # yapf: disable
+        self.write_json(ret)
+
+
 class UserGroupCreateHandler(AuthRequestHandler):
     def get(self):
         self.render("group_create.html")

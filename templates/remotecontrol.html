@@ -171,96 +171,106 @@
             <el-tabs v-model="activeName" @tab-click="handleTabClick">
                 <el-tab-pane label="常用" name="common">
                     <div ref="commonContainer" class="row">
+                        <!-- 常用面板 分左右两列，宽度变小时合并为一列 -->
                         <div :class="tabColumnStyle">
-                            <div class="card bottom-gutter">
-                                <div class="card-header">
-                                    ATX
+                            <div class="row">
+                                <div class="col-12 bottom-gutter">
+                                    <div class="card">
+                                        <div class="card-header">
+                                            ATX
+                                        </div>
+                                        <div class="card-body">
+                                            {{!address}}
+                                        </div>
+                                    </div>
                                 </div>
-                                <div class="card-body">
-                                    {{!address}}
-                                </div>
-                            </div>
-                        </div>
-                        <div :class="tabColumnStyle">
-                            <div class="card bottom-gutter">
-                                <div class="card-header">
-                                    <i class="fa fa-globe"></i>
-                                    浏览器打开URL
-                                </div>
-                                <div class="card-body">
-                                    <textarea class="form-control" placeholder="在这里输入URL" rows=3 v-model="browserURL"
-                                        @keyup.enter="openBrowser(browserURL)"></textarea>
-                                    <div style="padding-top: 5px">
-                                        <button type="button" class="btn btn-primary float-right"
-                                            @click='openBrowser(browserURL)'>打开</button>
+                                <div class="col-12 bottom-gutter">
+                                    <div class="card bottom-gutter">
+                                        <div class="card-header">
+                                            <i class="fa fa-dashboard"></i>
+                                            快捷入口
+                                        </div>
+                                        <div class="card-body">
+                                            <button class="btn btn-sm btn-sm btn-outline-primary"
+                                                @click="runShell('am start -a android.settings.SETTINGS')">
+                                                <i class="fas fa-cog"></i>
+                                                Settings
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-primary"
+                                                @click="runShell('am start -a com.android.settings.APPLICATION_DEVELOPMENT_SETTINGS')">
+                                                <i class="fas fa-wrench"></i>
+                                                开发者
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-primary"
+                                                @click="runShell('am start -a android.settings.WIRELESS_SETTINGS')">
+                                                <i class="fas fa-wifi"></i>
+                                                WIFI
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-primary"
+                                                @click="runShell('am start -n com.tencent.tmgp.sgame/.SGameActivity')">
+                                                <i class="fas fa-gamepad"></i>
+                                                王者荣耀
+                                            </button>
+                                            <hr>
+                                            <span v-for="v in userSettings.shortcuts" style="margin-right: 5px">
+                                                <el-popover trigger="hover" placement="top" min-width="160">
+                                                    <code v-text="v.command"></code>
+                                                    <div style="text-align: right; margin: 0">
+                                                        <el-button @click="removeShortcut(v)" type="danger"
+                                                            icon="el-icon-delete" size="mini" circle>
+                                                        </el-button>
+                                                    </div>
+                                                    <el-button size="small" round slot="reference"
+                                                        @click="triggerShortcut(v)">
+                                                        {{!v.name}}</el-button>
+                                                </el-popover>
+                                            </span>
+                                            <el-popover placement="right" width="400" trigger="click"
+                                                v-model="userSettings.visible">
+                                                <div>
+                                                    <h4>增加快捷命令</h4>
+                                                    <div class="form-group">
+                                                        <label>名称</label>
+                                                        <input class="form-control" v-model="userSettings.inputName"
+                                                            type="text">
+                                                    </div>
+                                                    <div class="form-group">
+                                                        <label>SHELL命令</label>
+                                                        <input class="form-control" v-model="userSettings.inputCommand"
+                                                            type="text">
+                                                    </div>
+                                                    <el-button size="small" @click="addShortcut">添加</i>
+                                                </div>
+                                                <el-button size="small" round slot="reference"><i
+                                                        class="fas fa-plus"></i>
+                                                </el-button>
+                                            </el-popover>
+                                            <!-- more https://stackoverflow.com/questions/38051706/i-am-trying-to-launch-settings-through-adb-using-the-adb-monkey-command-but-it-->
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
                         <div :class="tabColumnStyle">
-                            <div class="card bottom-gutter">
-                                <div class="card-header">
-                                    <i class="fa fa-dashboard"></i>
-                                    快捷入口
-                                </div>
-                                <div class="card-body">
-                                    <button class="btn btn-outline-primary"
-                                        @click="runShell('am start -a android.settings.SETTINGS')">
-                                        <i class="fas fa-cog"></i>
-                                        Settings
-                                    </button>
-                                    <button class="btn btn-outline-primary"
-                                        @click="runShell('am start -a com.android.settings.APPLICATION_DEVELOPMENT_SETTINGS')">
-                                        <i class="fas fa-wrench"></i>
-                                        开发者
-                                    </button>
-                                    <button class="btn btn-outline-primary"
-                                        @click="runShell('am start -a android.settings.WIRELESS_SETTINGS')">
-                                        <i class="fas fa-wifi"></i>
-                                        WIFI
-                                    </button>
-                                    <button class="btn btn-outline-primary"
-                                        @click="runShell('am start -n com.tencent.tmgp.sgame/.SGameActivity')">
-                                        <i class="fas fa-gamepad"></i>
-                                        王者荣耀
-                                    </button>
-                                    <hr>
-                                    <span v-for="v in userSettings.shortcuts" style="margin-right: 5px">
-                                        <el-popover trigger="hover" placement="top" min-width="160">
-                                            <code v-text="v.command"></code>
-                                            <div style="text-align: right; margin: 0">
-                                                <el-button @click="removeShortcut(v)" type="danger"
-                                                    icon="el-icon-delete" size="mini" circle></el-button>
-                                            </div>
-                                            <el-button size="small" round slot="reference" @click="triggerShortcut(v)">
-                                                {{!v.name}}</el-button>
-                                        </el-popover>
-                                    </span>
-                                    <el-popover placement="right" width="400" trigger="click"
-                                        v-model="userSettings.visible">
-                                        <div>
-                                            <h4>增加快捷命令</h4>
-                                            <div class="form-group">
-                                                <label>名称</label>
-                                                <input class="form-control" v-model="userSettings.inputName"
-                                                    type="text">
-                                            </div>
-                                            <div class="form-group">
-                                                <label>SHELL命令</label>
-                                                <input class="form-control" v-model="userSettings.inputCommand"
-                                                    type="text">
-                                            </div>
-                                            <el-button size="small" @click="addShortcut">添加</i>
+                            <div class="row">
+                                <div class="col-12 bottom-gutter">
+                                    <div class="card bottom-gutter">
+                                        <div class="card-header">
+                                            <i class="fa fa-globe"></i>
+                                            浏览器打开URL
                                         </div>
-                                        <el-button size="small" round slot="reference"><i class="fas fa-plus"></i>
-                                        </el-button>
-                                    </el-popover>
-                                    <!-- more https://stackoverflow.com/questions/38051706/i-am-trying-to-launch-settings-through-adb-using-the-adb-monkey-command-but-it-->
+                                        <div class="card-body">
+                                            <textarea class="form-control" placeholder="在这里输入URL" rows=3
+                                                v-model="browserURL" @keyup.enter="openBrowser(browserURL)"></textarea>
+                                            <div style="padding-top: 5px">
+                                                <button type="button" class="btn btn-primary float-right"
+                                                    @click='openBrowser(browserURL)'>打开</button>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                        <div :class="tabColumnStyle"></div>
-                        <div :class="tabColumnStyle"></div>
                     </div>
                 </el-tab-pane>
                 <el-tab-pane label="Terminal" name="terminal">
@@ -376,8 +386,27 @@
                     }, {}),
                 }, ret.data),
                 methods: {
+                    loadUserSettings() {
+                        return $.getJSON("/api/v1/user/settings").done(ret => {
+                            this.userSettings.shortcuts = ret.shortcuts || []
+                        })
+                    },
+                    updateUserSettings() {
+                        return $.ajax({
+                            method: "put",
+                            url: "/api/v1/user/settings",
+                            dataType: "json",
+                            data: JSON.stringify({
+                                "shortcuts": this.userSettings.shortcuts,
+                            })
+                        }).done(ret => {
+                            console.log("设置已更新")
+                        })
+                    },
                     triggerShortcut(v) {
-                        return this.runShell(v.command)
+                        return this.runShell(v.command).done(ret => {
+                            console.log("Shell", v.command, "output", ret)
+                        })
                     },
                     addShortcut() {
                         let s = this.userSettings
@@ -391,11 +420,13 @@
                         s.inputName = ""
                         s.inputCommand = ""
                         s.visible = false;
+                        return this.updateUserSettings()
                     },
                     removeShortcut(c) {
                         this.userSettings.shortcuts = this.userSettings.shortcuts.filter(v => {
                             return v.name != c.name
                         })
+                        return this.updateUserSettings()
                     },
                     hotfix() {
                         // 修复屏幕旋转问题
@@ -973,6 +1004,9 @@
 
                     // 唤醒屏幕
                     this.runKeyevent("WAKEUP")
+
+                    // 加载用户配置
+                    this.loadUserSettings()
                 },
                 computed: {
                     deviceUrl() {

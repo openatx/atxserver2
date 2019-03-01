@@ -9,7 +9,8 @@ from .views.device import (DeviceChangesWSHandler, DeviceItemHandler,
                            AndroidDeviceControlHandler, AppleDeviceListHandler)
 from .views.provider import ProviderHeartbeatWSHandler
 from .views.upload import UploadItemHandler, UploadListHandler
-from .views.user import APIUserHandler, UserHandler, APIUserGroupHandler, UserGroupCreateHandler
+from .views.user import (UserHandler, UserGroupCreateHandler,
+                         APIUserGroupHandler, APIUserHandler, APIUserSettingsHandler)
 
 urlpatterns = [
     (r"/", MainHandler),
@@ -24,6 +25,7 @@ urlpatterns = [
     (r"/devices", DeviceListHandler),
     (r"/devices/([^/]+)", DeviceItemHandler),
     (r"/devices/([^/]+)/remotecontrol", AndroidDeviceControlHandler),
+
     (r"/websocket/devicechanges", DeviceChangesWSHandler),
     (r"/websocket/heartbeat", ProviderHeartbeatWSHandler),
     # For compability of atx-server-1
@@ -33,6 +35,7 @@ urlpatterns = [
     (r"/api/v1/user/devices", APIUserDeviceHandler),
     (r"/api/v1/user/devices/([^/]+)", APIUserDeviceHandler),
     (r"/api/v1/user/groups", APIUserGroupHandler),
+    (r"/api/v1/user/settings", APIUserSettingsHandler),
     # GET /api/v1/devices
     # POST /api/v1/user/devices/{serial}/remoteConnect
     # DELETE /api/v1/user/devices/{serial}/remoteConnect
