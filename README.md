@@ -85,7 +85,7 @@ python3 main.py
 - [https://www.easyicon.net](https://www.easyicon.net/iconsearch/hub/)
 - <https://github.com/mikusjelly/apkutils>
 - <https://github.com/gtsystem/python-remotezip>
-
+- <https://github.com/willerce/WhatsInput>
 
 ## LICENSE
 [MIT](LICENSE)

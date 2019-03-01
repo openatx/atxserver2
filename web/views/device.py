@@ -34,13 +34,13 @@ class APIUserDeviceHandler(AuthRequestHandler):
             return
 
         # Find the highest priority source
-        address = None
+        source = None
         priority = 0
         for s in data.get('sources', {}).values():
             if s['priority'] > priority:
-                address = s['deviceAddress']
+                source = s
                 priority = s['priority']
-        data['address'] = address
+        data['bestSource'] = source
 
         self.write_json({
             "success": True,
@@ -126,7 +126,10 @@ class AndroidDeviceControlHandler(AuthRequestHandler):
 
 
 class DeviceItemHandler(AuthRequestHandler):
-    async def put(self, id):
+    def get(self, udid):
+        self.redirect("/api/v1/user/devices/" + udid)
+
+    async def put(self, udid):
         pass
 
 

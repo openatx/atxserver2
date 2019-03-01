@@ -257,23 +257,19 @@
                                         <div class="card-body">
                                             <textarea ref="whatsinput" :disable="whatsinput.disabled"
                                                 placeholder="输入点什么" class="form-control" v-model="whatsinput.text"
-                                                @keydown.shift.enter.prevent="sendInputText(true, true)"></textarea>
-                                            <span style="padding-top: 5px" class="float-right">
+                                                @input="syncWhatsinput"
+                                                @keydown.enter.prevent="syncInputKey(66)"></textarea>
+                                            <!-- <span style="padding-top: 5px" class="float-right">
                                                 <el-button-group>
                                                     <el-button @click="sendInputAction('search')" size="mini"
                                                         type="primary">
                                                         搜索
                                                     </el-button>
-                                                    <el-button @click="clearInputText" size="mini" type="primary">
-                                                        清空
-                                                    </el-button>
-                                                    <el-button @click="sendInputText" size="mini" type="primary">输入
-                                                    </el-button>
                                                 </el-button-group>
-                                            </span>
+                                            </span> -->
                                             <span
                                                 style="text-align: right; font-size: 0.74em; color: gray; margin-bottom: 0px">
-                                                Shift+Enter 快捷输入</span>
+                                                Enter 快速输入</span>
                                         </div>
                                     </div>
                                 </div>
@@ -400,6 +396,7 @@
                     websockets: {
                         screen: null,
                         touchpad: null,
+                        winput: null,
                     },
                     whatsinput: {
                         text: "",
@@ -419,6 +416,49 @@
                     }, {}),
                 }, ret.data),
                 methods: {
+                    loadWhatsinput() {
+                        console.log(this.whatsinputUrl)
+                        let ws = new WebSocket(this.whatsinputUrl)
+                        this.websockets.winput = ws;
+                        ws.onopen = (ev) => {
+                            console.log("websocket connected")
+                        }
+                        ws.onmessage = (ev) => {
+                            console.log("winput recv", ev)
+                            let data = JSON.parse(ev.data)
+                            switch (data.type) {
+                                case "InputStart":
+                                    this.whatsinput.text = data.text;
+                                    break;
+                                case "InputFinish":
+                                    this.whatsinput.disabled = true
+                                    break
+                                case "InputChange":
+                                    this.whatsinput.text = data.text;
+                                    break;
+                            }
+                        }
+                        ws.onclose = (ev) => {
+                            console.log("winput closed")
+                        }
+                    },
+                    syncWhatsinput() {
+                        console.log("sync", this.whatsinput.text)
+                        let ws = this.websockets.winput;
+                        ws.send(JSON.stringify({
+                            type: "InputEdit",
+                            text: this.whatsinput.text,
+                        }))
+                    },
+                    syncInputKey(key) {
+                        console.log("Sync key", key)
+                        let code = { "enter": "66" }[key] || key;
+                        let ws = this.websockets.winput;
+                        ws.send(JSON.stringify({
+                            type: "InputKey",
+                            code: "" + code,
+                        }))
+                    },
                     clearInputText() {
                         const fastinput_ime = "com.github.uiautomator/.FastInputIME"
                         return this.runShell("ime enable " + fastinput_ime)
@@ -1085,8 +1125,14 @@
 
                     // 加载用户配置
                     this.loadUserSettings()
+
+                    // 加载whatsinput输入法
+                    this.loadWhatsinput()
                 },
                 computed: {
+                    address() {
+                        return this.bestSource.deviceAddress
+                    },
                     deviceUrl() {
                         return "http://" + this.address
                     },
@@ -1095,6 +1141,9 @@
                     },
                     screenshotUrl() {
                         return "http://" + this.address + "/screenshot"
+                    },
+                    whatsinputUrl() {
+                        return "ws://" + this.bestSource.whatsinputAddress
                     },
                     displayLinked() {
                         return this.websockets.screen !== null;
