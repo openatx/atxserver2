@@ -23,10 +23,42 @@ class ReleaseError(Exception):
 class APIUserDeviceHandler(AuthRequestHandler):
     """ device Acquire and Release """
 
-    async def get(self):
+    async def get_device(self, udid):
+        data = await db.table("devices").get(udid).run()
+        if not data:
+            self.set_status(400)  # bad request
+            self.write_json({
+                "success": False,
+                "description": "device not found " + id,
+            })
+            return
+
+        # Find the highest priority source
+        address = None
+        priority = 0
+        for s in data.get('sources', {}).values():
+            if s['priority'] > priority:
+                address = s['deviceAddress']
+                priority = s['priority']
+        data['address'] = address
+
+        self.write_json({
+            "success": True,
+            "data": data,
+        })
+
+    async def get(self, udid=None):
         """ get user current using devices """
-        data = await db.devices.get_all(
-            rsql_hook=lambda q: q.filter({"userId": self.current_user.email}))
+        if udid:
+            await self.get_device(udid)
+            return
+
+        data = await db.table("devices").filter({
+            "present": True,
+            "using": True,
+            "userId": self.current_user.email,
+        }).all() # yapf: disable
+
         self.write_json({
             "success": True,
             "devices": data,
@@ -96,32 +128,6 @@ class AndroidDeviceControlHandler(AuthRequestHandler):
 class DeviceItemHandler(AuthRequestHandler):
     async def put(self, id):
         pass
-
-    async def get_json(self, id):
-        data = await db.table("devices").get(id).run()
-        if not data:
-            self.set_status(400)  # bad request
-            self.write_json({
-                "success": False,
-                "description": "device not found " + id,
-            })
-            return
-
-        address = None
-        priority = 0
-        for s in data.get('sources', {}).values():
-            if s['priority'] > priority:
-                address = s['deviceAddress']
-                priority = s['priority']
-
-        data['address'] = address
-        self.write_json({
-            "success": True,
-            "data": data,
-        })
-
-    async def get_html(self, id):
-        self.write("No such html")
 
 
 class AppleDeviceListHandler(AuthRequestHandler):
