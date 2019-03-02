@@ -12,7 +12,7 @@ from ..libs import jsondate
 from .base import AuthRequestHandler, BaseWebSocketHandler
 
 
-class OccupyError(Exception):
+class AcquireError(Exception):
     pass
 
 
@@ -57,7 +57,7 @@ class APIUserDeviceHandler(AuthRequestHandler):
             "present": True,
             "using": True,
             "userId": self.current_user.email,
-        }).all() # yapf: disable
+        }).all()  # yapf: disable
 
         self.write_json({
             "success": True,
@@ -69,12 +69,12 @@ class APIUserDeviceHandler(AuthRequestHandler):
         data = self.get_payload()
         udid = data["udid"]
         try:
-            await occupy_device(self.current_user.email, udid)
+            await D(udid).acquire(self.current_user.email)
             self.write_json({
                 "success": True,
                 "description": "Device successfully added"
             })
-        except OccupyError as e:
+        except AcquireError as e:
             self.set_status(403)  # forbidden
             self.write_json({
                 "success": False,
@@ -84,7 +84,7 @@ class APIUserDeviceHandler(AuthRequestHandler):
     async def delete(self, udid: str):
         """ release device """
         try:
-            await release_device(self.current_user.email, udid)
+            await D(udid).release(self.current_user.email)
             self.write_json({
                 "success": True,
                 "description": "Device successfully released"
@@ -110,9 +110,9 @@ class AndroidDeviceControlHandler(AuthRequestHandler):
             return
         if not device.get("using"):
             try:
-                await occupy_device(self.current_user.email, udid)
+                await D(udid).acquire(self.current_user.email)
                 self.render("remotecontrol.html", udid=udid)
-            except OccupyError as e:
+            except AcquireError as e:
                 self.render("error.html", message=str(e))
             finally:
                 return
@@ -190,42 +190,103 @@ class DeviceChangesWSHandler(BaseWebSocketHandler):
         print("Websocket closed")
 
 
-async def occupy_device(email: str, udid: str):
-    """
-    Raises:
-        OccupyError
-    """
-    device = await db.table("devices").get(udid).run()
-    if not device:
-        raise OccupyError("device not exist")
-    if not device.get('present'):
-        raise OccupyError("device absent")
-    if device.get('using'):
-        if device.get('userId') == email:
-            # already used by ..{email}
-            return
-        raise OccupyError("device busy")
+class D(object):
+    """ Device object """
 
-    ret = await db.table("devices").get(udid).update({"using": True})
-    if ret['skipped'] == 1:
-        raise OccupyError(
-            "not fast enough, device have been taken from others")
-    await db.table("devices").get(udid).update({
-        "userId": email,
-        "usingBeganAt": time_now()
-    })
+    def __init__(self, udid: str):
+        self.udid = udid
+
+    async def update(self, data: dict):
+        return await db.table("devices").get(self.udid).update(data)
+
+    async def acquire(self, email: str, idle_timeout: int = 100):
+        """
+        Raises:
+            OccupyError
+        """
+        device = await db.table("devices").get(self.udid).run()
+        if not device:
+            raise AcquireError("device not exist")
+        if not device.get('present'):  # 设备离线
+            raise AcquireError("device absent")
+        if device.get('using'):  # 使用中
+            if device.get('userId') == email:
+                # already used by ..{email}
+                return
+            raise AcquireError("device busy")
+        if device.get("colding"):  # 冷却中
+            raise AcquireError("device is colding")
+
+        ret = await db.table("devices").get(self.udid).update({"using": True})
+        if ret['skipped'] == 1:  # 被其他人占用了
+            raise AcquireError(
+                "not fast enough, device have been taken from others")
+        await self.update({
+            "userId": email,
+            "usingBeganAt": time_now(),
+            "lastActivatedAt": time_now(),
+            "idleTimeout": idle_timeout,
+        })
+
+    async def release(self, email: str):
+        """
+        Raises:
+            ReleaseError
+        """
+        device = await db.table("devices").get(self.udid).run()
+        if not device:
+            raise ReleaseError("device not exist")
+        if device.get('userId') != email:
+            raise ReleaseError("device is not owned by you")
+        await self.update({
+            "using": False,
+            "userId": None
+        })
 
 
-async def release_device(email: str, udid: str):
-    device = await db.table("devices").get(udid).run()
-    if not device:
-        raise ReleaseError("device not exist")
-    if device.get('userId') != email:
-        raise ReleaseError("device is not owned by you")
-    await db.table("devices").get(udid).update({
-        "using": False,
-        "userId": None
-    })
+# async def acquire_device(email: str, udid: str, idle_timeout: int = 600):
+#     """
+#     Raises:
+#         OccupyError
+#     """
+#     device = await db.table("devices").get(udid).run()
+#     if not device:
+#         raise AcquireError("device not exist")
+#     if not device.get('present'):
+#         raise AcquireError("device absent")
+#     if device.get('using'):
+#         if device.get('userId') == email:
+#             # already used by ..{email}
+#             return
+#         raise AcquireError("device busy")
+#     if device.get("colding"):
+#         raise AcquireError("device is colding")
+
+#     ret = await db.table("devices").get(udid).update({"using": True})
+#     if ret['skipped'] == 1:
+#         raise AcquireError(
+#             "not fast enough, device have been taken from others")
+#     await db.table("devices").get(udid).update({
+#         "userId": email,
+#         "usingBeganAt": time_now(),
+#         "lastActivatedAt": time_now(),
+#         "idleTimeout": idle_timeout,
+#     })
+
+# async def release_device(email: str, udid: str):
+#     """
+#     Raises:
+#         ReleaseError
+#     """
+#     device = await db.table("devices").get(udid).run()
+#     if not device:
+#         raise ReleaseError("device not exist")
+#     if device.get('userId') != email:
+#         raise ReleaseError("device is not owned by you")
+#     await db.table("devices").get(udid).update({
+#         "using": False,
+#         "userId": None
+#     })
 
 
 class DeviceBookWSHandler(BaseWebSocketHandler):
@@ -239,8 +300,8 @@ class DeviceBookWSHandler(BaseWebSocketHandler):
 
         email = self.current_user.email
         try:
-            await occupy_device(email, udid)
-        except OccupyError as e:
+            await D(udid).acquire(email)
+        except AcquireError as e:
             self.write_message(str(e))
             self.close()
             return

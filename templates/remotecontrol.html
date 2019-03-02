@@ -140,13 +140,14 @@
                     <i v-else @click="mirrorDisplay" class="fas fa-unlink" style="color: red"></i>
                 </span>
                 <span>
-                    <i v-if="websockets.touchpad != null" @click="closeSyncTouchpad" class="far fa-hand-paper"
+                    <i v-if="websockets.touchpad != null" @click="closeSyncTouchpad" class="fas fa-mouse-pointer"
                         style="color: green"></i>
-                    <i v-else @click="syncTouchpad" class="far fa-hand-paper" style="color: red"></i>
+                    <i v-else @click="syncTouchpad" class="fas fa-mouse-pointer" style="color: red"></i>
                 </span>
-                <span @click="fixInputMethod">
-                    <i v-if="websockets.winput != null" class="fas fa-keyboard" style="color: green"></i>
-                    <i v-else class="fas fa-keyboard"></i>
+                <span>
+                    <i v-if="!websockets.winput" class="fas fa-keyboard" style="color: red"></i>
+                    <i v-if="!whatsinput.disabled" class="fas fa-keyboard" style="color: green"></i>
+                    <i v-else class="fas fa-keyboard" style="color:gray"></i>
                 </span>
                 <span>
                     <i @click="hotfix" title="hotfix" class="fas fa-hammer"></i>
@@ -182,6 +183,30 @@
                         <!-- 常用面板 分左右两列，宽度变小时合并为一列 -->
                         <div :class="tabColumnStyle">
                             <div class="row">
+                                <div class="col-12 bottom-gutter">
+                                    <div class="card">
+                                        <div class="card-header">
+                                            <i class="fas fa-keyboard"></i> 输入框
+                                            <span class="float-right">
+                                                <el-tooltip effect="dark" content="修复输入法" placement="top-start">
+                                                    <i class="fas fa-tools float-right cursor-pointer"
+                                                        @click="fixInputMethod"></i>
+                                                </el-tooltip>
+                                            </span>
+                                        </div>
+                                        <div class="card-body">
+                                            <textarea ref="whatsinput" :disabled="whatsinput.disabled"
+                                                :placeholder="whatsinput.disabled ? 'Input disabled' : 'Input something ...'"
+                                                class="form-control" v-model="whatsinput.text" @input="sendInputText"
+                                                @keydown.tab.exact.prevent="sendInputKey('tab')"
+                                                @keydown.enter.exact.prevent="sendInputKey('enter')"></textarea>
+                                            <span
+                                                style="text-align: right; font-size: 0.74em; color: gray; margin-bottom: 0px">
+                                                <code>Shift+Enter</code> to start a new line, <code>Enter</code> to
+                                                send</span>
+                                        </div>
+                                    </div>
+                                </div>
                                 <div class="col-12 bottom-gutter">
                                     <div class="card">
                                         <div class="card-header">
@@ -254,28 +279,6 @@
                                                 </el-button>
                                             </el-popover>
                                             <!-- more https://stackoverflow.com/questions/38051706/i-am-trying-to-launch-settings-through-adb-using-the-adb-monkey-command-but-it-->
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-12 bottom-gutter">
-                                    <div class="card">
-                                        <div class="card-header">
-                                            <i class="fas fa-keyboard"></i> 输入框
-                                            <span class="float-right">
-                                                <el-tooltip effect="dark" content="修复输入法" placement="top-start">
-                                                    <i class="fas fa-tools float-right cursor-pointer"
-                                                        @click="fixInputMethod"></i>
-                                                </el-tooltip>
-                                            </span>
-                                        </div>
-                                        <div class="card-body">
-                                            <textarea ref="whatsinput" :disabled="whatsinput.disabled"
-                                                :placeholder="whatsinput.disabled ? 'Input disabled' : 'Input something ...'"
-                                                class="form-control" v-model="whatsinput.text" @input="sendInputText"
-                                                @keydown.enter.prevent="sendInputKey(66)"></textarea>
-                                            <span
-                                                style="text-align: right; font-size: 0.74em; color: gray; margin-bottom: 0px">
-                                                Enter 快速输入</span>
                                         </div>
                                     </div>
                                 </div>
@@ -436,20 +439,20 @@
                                 this.$refs.whatsinput.focus()
                                 return this.loadWhatsinput()
                             })
-                            .pipe(() => {
-                                this.notify.success({ message: "输入法修复完成" })
+                            .then(() => {
+                                this.$notify.success({ message: "输入法修复完成" })
+                            }, () => {
+                                this.$notify.success({ message: "输入法修复失败，F12查看详情" })
                             })
                     },
-                    loadWhatsinput() {
-                        let dtd = $.Deferred()
-                        // FIXME(ssx): Error
-                        // jQuery.Deferred exception: Cannot read property 'success' of undefined TypeError: Cannot read property 'success' of undefined
+                    loadWhatsinput(callback) {
                         console.log(this.whatsinputUrl)
+                        let defer = $.Deferred()
                         let ws = new WebSocket(this.whatsinputUrl)
                         this.websockets.winput = ws;
                         ws.onopen = (ev) => {
+                            defer.resolve()
                             console.log("whatsinput connected")
-                            dtd.resolve(true)
                         }
                         ws.onmessage = (ev) => {
                             console.log("winput recv", ev)
@@ -458,6 +461,9 @@
                                 case "InputStart":
                                     this.whatsinput.text = data.text;
                                     this.whatsinput.disabled = false
+                                    setTimeout(() => {
+                                        this.$refs.whatsinput.focus()
+                                    }, 1)
                                     break;
                                 case "InputFinish":
                                     this.whatsinput.disabled = true
@@ -469,7 +475,7 @@
                         }
                         ws.onerror = (ev) => {
                             console.error(ev)
-                            dtd.reject()
+                            defer.reject()
                         }
                         ws.onclose = (ev) => {
                             console.log("winput closed")
@@ -477,7 +483,7 @@
                                 this.websockets.winput = null;
                             }
                         }
-                        return dtd;
+                        return defer;
                     },
                     sendInputText() {
                         console.log("sync", this.whatsinput.text)
@@ -489,7 +495,7 @@
                     },
                     sendInputKey(key) {
                         console.log("Sync key", key)
-                        let code = { "enter": "66" }[key] || key;
+                        let code = { "enter": 66, "tab": 61 }[key] || key;
                         let ws = this.websockets.winput;
                         ws.send(JSON.stringify({
                             type: "InputKey",
