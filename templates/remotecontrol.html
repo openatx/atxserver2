@@ -44,6 +44,10 @@
         color: white;
     }
 
+    .cursor-pointer {
+        cursor: pointer;
+    }
+
     .color-wrong {
         color: red;
     }
@@ -140,7 +144,7 @@
                         style="color: green"></i>
                     <i v-else @click="syncTouchpad" class="far fa-hand-paper" style="color: red"></i>
                 </span>
-                <span @click="changeInputMethod">
+                <span @click="fixInputMethod">
                     <i v-if="websockets.winput != null" class="fas fa-keyboard" style="color: green"></i>
                     <i v-else class="fas fa-keyboard"></i>
                 </span>
@@ -257,11 +261,17 @@
                                     <div class="card">
                                         <div class="card-header">
                                             <i class="fas fa-keyboard"></i> 输入框
+                                            <span class="float-right">
+                                                <el-tooltip effect="dark" content="修复输入法" placement="top-start">
+                                                    <i class="fas fa-tools float-right cursor-pointer"
+                                                        @click="fixInputMethod"></i>
+                                                </el-tooltip>
+                                            </span>
                                         </div>
                                         <div class="card-body">
                                             <textarea ref="whatsinput" :disabled="whatsinput.disabled"
-                                                placeholder="输入点什么" class="form-control" v-model="whatsinput.text"
-                                                @input="sendInputText"
+                                                :placeholder="whatsinput.disabled ? 'Input disabled' : 'Input something ...'"
+                                                class="form-control" v-model="whatsinput.text" @input="sendInputText"
                                                 @keydown.enter.prevent="sendInputKey(66)"></textarea>
                                             <span
                                                 style="text-align: right; font-size: 0.74em; color: gray; margin-bottom: 0px">
@@ -412,7 +422,11 @@
                     }, {}),
                 }, ret.data),
                 methods: {
-                    changeInputMethod() {
+                    fixInputMethod() {
+                        this.$notify.info({
+                            title: "输入法",
+                            message: "修复中",
+                        })
                         const inputMethod = "com.buscode.whatsinput/.WifiInputMethod"
                         return this.runShell("ime enable " + inputMethod)
                             .then(() => {
@@ -422,13 +436,20 @@
                                 this.$refs.whatsinput.focus()
                                 return this.loadWhatsinput()
                             })
+                            .pipe(() => {
+                                this.notify.success({ message: "输入法修复完成" })
+                            })
                     },
                     loadWhatsinput() {
+                        let dtd = $.Deferred()
+                        // FIXME(ssx): Error
+                        // jQuery.Deferred exception: Cannot read property 'success' of undefined TypeError: Cannot read property 'success' of undefined
                         console.log(this.whatsinputUrl)
                         let ws = new WebSocket(this.whatsinputUrl)
                         this.websockets.winput = ws;
                         ws.onopen = (ev) => {
                             console.log("whatsinput connected")
+                            dtd.resolve(true)
                         }
                         ws.onmessage = (ev) => {
                             console.log("winput recv", ev)
@@ -448,6 +469,7 @@
                         }
                         ws.onerror = (ev) => {
                             console.error(ev)
+                            dtd.reject()
                         }
                         ws.onclose = (ev) => {
                             console.log("winput closed")
@@ -455,6 +477,7 @@
                                 this.websockets.winput = null;
                             }
                         }
+                        return dtd;
                     },
                     sendInputText() {
                         console.log("sync", this.whatsinput.text)
@@ -694,6 +717,7 @@
 
                         ws.onopen = (ret) => {
                             console.log("minitouch synced")
+                            touchReset() // fix when device is out of control
                         }
                         ws.onmessage = (message) => {
                             // console.log("minitouch recv", message)
@@ -831,6 +855,12 @@
                             ws.send(JSON.stringify({
                                 operation: 'u',
                                 index: index,
+                            }))
+                        }
+
+                        function touchReset() {
+                            ws.send(JSON.stringify({
+                                operation: "r",
                             }))
                         }
 
