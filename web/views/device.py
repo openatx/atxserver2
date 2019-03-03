@@ -100,18 +100,31 @@ class APIUserDeviceHandler(AuthRequestHandler):
 class AndroidDeviceControlHandler(AuthRequestHandler):
     """ device remote control """
 
+    def render_remotecontrol(self, device: dict):
+        platform = device['platform']
+        udid = device['udid']
+        if platform == 'android':
+            self.render("remotecontrol_android.html", udid=udid)
+        elif platform == 'apple':
+            self.render("remotecontrol_apple.html", udid=udid)
+        else:
+            self.render(
+                "error.html", message="Platform {} is not support remote control".format(platform))
+
     async def get(self, udid):
         device = await db.table("devices").get(udid).run()
         if not device:
             self.render("error.html", message="404 Device not found")
             return
+        platform = device['platform']
+
         if not device['present']:
             self.render("error.html", message="Device is offline")
             return
         if not device.get("using"):
             try:
                 await D(udid).acquire(self.current_user.email)
-                self.render("remotecontrol.html", udid=udid)
+                self.render_remotecontrol(device)
             except AcquireError as e:
                 self.render("error.html", message=str(e))
             finally:
@@ -122,7 +135,8 @@ class AndroidDeviceControlHandler(AuthRequestHandler):
                 message="Device is not owned by you!, owner is {}".format(
                     device.get('userId')))
             return
-        self.render("remotecontrol.html", udid=udid)
+
+        self.render_remotecontrol(device)
 
 
 class DeviceItemHandler(AuthRequestHandler):

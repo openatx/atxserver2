@@ -1,0 +1,438 @@
+{% extends "base.html" %}
+
+{% block title %}设备远程控制{% end %}
+
+
+{% block style %}
+<style>
+  html,
+  body,
+  #content-wrapper {
+    height: 100%;
+  }
+
+  #content-wrapper {
+    display: flex;
+    flex-direction: column;
+  }
+
+  #app {
+    display: flex;
+    flex-grow: 1;
+  }
+
+  .height100 {
+    height: 100%;
+  }
+
+  .grow-0 {
+    flex-grow: 0;
+  }
+
+  .grow-1 {
+    flex-grow: 1;
+  }
+
+  .nopadding {
+    padding: 0px;
+  }
+
+  .cursor-pointer {
+    cursor: pointer;
+  }
+
+  .color-wrong {
+    color: red;
+  }
+
+  .debugarea {
+    /* background-color: #ddd; */
+    border: 1px solid red;
+  }
+
+  .screen {
+    position: relative;
+    background-color: gray;
+  }
+
+  .canvas-fg {
+    z-index: 20;
+    position: absolute;
+  }
+
+  .canvas-bg {
+    z-index: 10;
+  }
+
+  .bottom-gutter {
+    margin-bottom: 10px;
+  }
+</style>
+{% end %}
+
+{% block nav %}
+<nav class="navbar sticky-top navbar-expand-lg navbar-dark bg-dark">
+  <div class="container-fluid">
+    <a class="navbar-brand" href="/">
+      <span class="title">ATXServer2</span></a>
+    </a>
+    <div class="collapse navbar-collapse" id="navbarNavDropdown">
+      <div class="navbar-nav">
+        <a class="nav-item nav-link active" href="/">
+          <i class="fab fa-apple"></i> 苹果设备</a>
+        <!-- <a class="nav-item nav-link active" href='/'> -->
+        <!-- </a> -->
+      </div>
+      <div class="navbar-nav navbar-right ml-auto">
+        <div class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownMenuLink" data-toggle="dropdown"
+            aria-haspopup="true" aria-expanded="false">
+            {{current_user.email}}
+          </a>
+          <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
+            <a class="dropdown-item" href="/user">用户信息</a>
+            <a class="dropdown-item" href="/logout">Logout</a>
+          </div>
+        </div>
+        <form class="form-inline">
+          <button class="btn btn-warning" type="button" @click="stopUsing">停止使用</button>
+          <span ref="usingTime" class="navbar-text" style="margin-left: 1em">
+            使用时长
+          </span>
+        </form>
+      </div>
+    </div>
+
+    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNavDropdown"
+      aria-controls="navbarNavDropdown" aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+  </div>
+</nav>
+{% end %}
+
+
+{% block content %}
+<div class="container-fluid d-flex flex-column">
+  <div class="row grow-1">
+    <div class="col-sm debugarea d-flex flex-column justify-content-center nopadding grow-0">
+      <section class="debugarea" style="height: 2rem; line-height: 2rem; justify-self: start">
+        {{!properties.serial}}
+        <span>
+          <i v-if="displayLinked" @click="closeMirrorDisplay" class="fas fa-link" style="color: green"></i>
+          <i v-else @click="mirrorDisplay" class="fas fa-unlink" style="color: red"></i>
+        </span>
+        <span>
+          <i @click="hotfix" title="hotfix" class="fas fa-hammer"></i>
+        </span>
+
+      </section>
+      <section class="screen debugarea d-flex grow-1 align-items-center justify-content-center" style="line-height: 0px"
+        @dblclick="runKeyevent('WAKEUP')">
+        <!-- <canvas ref="fgCanvas" class="canvas-fg" v-bind:style="canvasStyle"></canvas> -->
+        <canvas ref="bgCanvas" class="canvas-bg" v-bind:style="canvasStyle"></canvas>
+        <span class="finger finger-0" style="transform: translate3d(200px, 100px, 0px)"></span>
+        <span class="finger finger-1" style="transform: translate3d(200px, 100px, 0px)"></span>
+        <!-- <img style="z-index: 10" v-if="loading" src="/assets/loading.svg"> -->
+      </section>
+      <section class="footer d-flex justify-content-around debugarea">
+        <button class="btn btn-default grow-1" @click="pressHome">
+          <i class="fas fa-home"></i>
+        </button>
+      </section>
+    </div>
+    <div class="col-sm debugarea" style="overflow-y: auto">
+      <el-tabs v-model="activeName" @tab-click="handleTabClick">
+        <el-tab-pane label="常用" name="common">
+          <p>
+            <label>SessionID</label>
+            <code v-text="session.id"></code>
+          </p>
+          <p>
+            <label>Frames</label>
+            <code v-text="session.frameCount"></code>
+          </p>
+        </el-tab-pane>
+      </el-tabs>
+    </div>
+  </div>
+</div>
+{% end %}
+
+{% block script %}
+<script>
+  const udid = "{{udid}}"
+  const userEmail = "{{current_user.email}}"
+
+  $.getJSON("/api/v1/user/devices/" + udid)
+    .then(ret => {
+
+      // closeWindowWhenReleased()
+
+      vm = new Vue({
+        el: "#content-wrapper",
+        data: Object.assign({
+          activeName: 'common',
+          canvas: {
+            bg: null,
+            fg: null,
+          },
+          canvasStyle: {
+            opacity: 1,
+            width: '400px',
+            height: '200px',
+            maxHeight: "unset",
+          },
+          rotation: 0,
+          displayLinked: false,
+          session: {
+            id: '',
+            frameCount: 0,
+          }
+        }, ret.data),
+        mounted: function () {
+          this.canvas.bg = this.$refs.bgCanvas;
+          this.mirrorDisplay()
+        },
+        methods: {
+          pressHome() {
+            return $.ajax({
+              url: this.path2url("/wda/homescreen"),
+              method: "POST",
+            })
+              .then(function (ret) {
+                console.log(ret);
+              })
+          },
+          hotfix() {
+
+          },
+          stopUsing() {
+            $.ajax({
+              method: "delete",
+              url: "/api/v1/user/devices/" + this.udid,
+              dataType: "json"
+            }).then(ret => {
+              window.close()
+            })
+          },
+          handleTabClick(tab, event) {
+            console.log(tab.name)
+          },
+          corsAnywhere(url) {
+            let noSchemeUrl = url.replace(/^http:\/\//, "")
+            return "http://localhost:18000/" + noSchemeUrl
+          },
+          path2url(url) {
+            return this.corsAnywhere("127.0.0.1:8100" + url)
+          },
+          mirrorDisplay() {
+            let canvas = this.canvas.bg,
+              screenshotUrl = this.path2url("/screenshot")
+            let ctx = canvas.getContext('2d')
+
+            $.ajax({
+              url: screenshotUrl,
+              dataType: "json",
+            }).then((ret) => {
+              console.log(ret.sessionId)
+              this.session.frameCount += 1
+              this.session.id = ret.sessionId;
+              img = new Image();
+
+              img.onload = () => {
+                canvas.width = img.width
+                canvas.height = img.height
+
+                ctx.drawImage(img, 0, 0, img.width, img.height);
+                this.fitCanvas(canvas)
+                // console.log("screen", new Date())
+                this.mirrorDisplay()
+              }
+
+              img.src = "data:image/png;base64," + ret.value;
+            })
+          },
+          syncTouchpad() {
+            let screen = {
+              bounds: {}
+            }
+
+            function calculateBounds() {
+              var el = element;
+              screen.bounds.w = el.offsetWidth
+              screen.bounds.h = el.offsetHeight
+              screen.bounds.x = 0
+              screen.bounds.y = 0
+
+              while (el.offsetParent) {
+                screen.bounds.x += el.offsetLeft
+                screen.bounds.y += el.offsetTop
+                el = el.offsetParent
+              }
+            }
+
+            let mouseDownListener = (event) => {
+              var e = event;
+              if (e.originalEvent) {
+                e = e.originalEvent
+              }
+              e.preventDefault()
+
+              // activate whatsinput
+              this.$refs.whatsinput.focus()
+
+              // Middle click equals HOME
+              if (e.which === 2) {
+                this.runKeyevent("HOME")
+                return
+              }
+              // Right click equals BACK
+              if (e.which === 3) {
+                this.runKeyevent("BACK")
+                return
+              }
+
+
+              fakePinch = e.altKey
+              calculateBounds()
+
+              var x = e.pageX - screen.bounds.x
+              var y = e.pageY - screen.bounds.y
+              var pressure = 0.5
+              // activeFinger(0, e.pageX, e.pageY, pressure);
+
+              touchDown(0, x, y, pressure);
+              touchCommit();
+
+              // element.removeEventListener('mousemove', mouseHoverListener);
+              element.addEventListener('mousemove', mouseMoveListener);
+              document.addEventListener('mouseup', mouseUpListener);
+            }
+
+            let mouseMoveListener = (event) => {
+              var e = event
+              if (e.originalEvent) {
+                e = e.originalEvent
+              }
+              // Skip secondary click
+              if (e.which === 3) {
+                return
+              }
+              e.preventDefault()
+
+              var pressure = 0.5
+              activeFinger(0, e.pageX, e.pageY, pressure);
+              var x = e.pageX - screen.bounds.x
+              var y = e.pageY - screen.bounds.y
+
+              touchMove(0, x, y, pressure);
+              touchCommit();
+            }
+
+            function mouseUpListener(event) {
+              var e = event
+              if (e.originalEvent) {
+                e = e.originalEvent
+              }
+              // Skip secondary click
+              if (e.which === 3) {
+                return
+              }
+              e.preventDefault()
+
+              touchUp(0)
+              touchCommit()
+              stopMousing()
+            }
+
+            function stopMousing() {
+              element.removeEventListener('mousemove', mouseMoveListener);
+              // element.addEventListener('mousemove', mouseHoverListener);
+              document.removeEventListener('mouseup', mouseUpListener);
+              deactiveFinger(0);
+            }
+
+            function activeFinger(index, x, y, pressure) {
+              var scale = 0.5 + pressure
+              $(".finger-" + index)
+                .addClass("active")
+                .css("transform", 'translate3d(' + x + 'px,' + y + 'px,0)')
+            }
+
+            function deactiveFinger(index) {
+              $(".finger-" + index).removeClass("active")
+            }
+
+            function preventHandler(event) {
+              event.preventDefault()
+            }
+          },
+          fitCanvas(canvas) {
+            if (canvas.width > canvas.height) {
+              // 横屏显示，宽高相等
+              this.canvasStyle.maxHeight = canvas.parentElement.clientHeight + "px";
+              this.canvasStyle.height = "auto"
+              this.canvasStyle.width = canvas.parentElement.clientHeight + "px"
+            } else {
+              this.canvasStyle.maxHeight = "unset"
+              this.canvasStyle.height = canvas.parentElement.clientHeight + "px"
+              this.canvasStyle.width = "auto"
+            }
+          },
+          drawBlobImageToCanvas(blob, canvas) {
+            // Support jQuery Promise
+            var dtd = $.Deferred();
+            var ctx = canvas.getContext('2d'),
+              URL = window.URL || window.webkitURL,
+              BLANK_IMG =
+                'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==',
+              img = this.imagePool.next();
+
+            img.onload = () => {
+              canvas.width = img.width
+              canvas.height = img.height
+
+              ctx.drawImage(img, 0, 0, img.width, img.height);
+              this.fitCanvas(canvas)
+
+              // Try to forcefully clean everything to get rid of memory
+              // leaks. Note self despite this effort, Chrome will still
+              // leak huge amounts of memory when the developer tools are
+              // open, probably to save the resources for inspection. When
+              // the developer tools are closed no memory is leaked.
+              img.onload = img.onerror = null
+              img.src = BLANK_IMG
+              img = null
+              blob = null
+
+              URL.revokeObjectURL(url)
+              url = null
+              dtd.resolve();
+            }
+
+            img.onerror = function () {
+              // Happily ignore. I suppose this shouldn't happen, but
+              // sometimes it does, presumably when we're loading images
+              // too quickly.
+
+              // Do the same cleanup here as in onload.
+              img.onload = img.onerror = null
+              img.src = BLANK_IMG
+              img = null
+              blob = null
+
+              URL.revokeObjectURL(url)
+              url = null
+              dtd.reject();
+            }
+
+            var url = URL.createObjectURL(blob)
+            img.src = url;
+            return dtd;
+          },
+        }
+      })
+    })
+</script>
+{% end %}
