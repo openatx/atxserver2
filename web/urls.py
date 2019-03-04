@@ -4,13 +4,15 @@
 import os
 
 from .views import LogoutHandler, MainHandler
-from .views.device import (DeviceChangesWSHandler, DeviceItemHandler,
-                           DeviceListHandler, APIUserDeviceHandler,
+from .views.device import (DeviceChangesWSHandler, DeviceItemHandler, DeviceListHandler,
+                           APIUserDeviceHandler, APIDeviceListHandler,
                            AndroidDeviceControlHandler, AppleDeviceListHandler)
 from .views.provider import ProviderHeartbeatWSHandler
 from .views.upload import UploadItemHandler, UploadListHandler
 from .views.user import (UserHandler, UserGroupCreateHandler,
                          APIUserGroupHandler, APIUserHandler, APIUserSettingsHandler)
+from .views.base import make_redirect_handler
+
 
 urlpatterns = [
     (r"/", MainHandler),
@@ -29,13 +31,14 @@ urlpatterns = [
     (r"/websocket/devicechanges", DeviceChangesWSHandler),
     (r"/websocket/heartbeat", ProviderHeartbeatWSHandler),
     # For compability of atx-server-1
-    (r"/list", DeviceListHandler),
+    (r"/list", make_redirect_handler("/api/v1/devices")),
     # RESP API
-    (r"/api/v1/user", APIUserHandler),
-    (r"/api/v1/user/devices", APIUserDeviceHandler),
-    (r"/api/v1/user/devices/([^/]+)", APIUserDeviceHandler),
-    (r"/api/v1/user/groups", APIUserGroupHandler),
-    (r"/api/v1/user/settings", APIUserSettingsHandler),
+    (r"/api/v1/devices", APIDeviceListHandler), # GET
+    (r"/api/v1/user", APIUserHandler), # GET
+    (r"/api/v1/user/devices", APIUserDeviceHandler), # GET, POST
+    (r"/api/v1/user/devices/([^/]+)", APIUserDeviceHandler), # GET
+    (r"/api/v1/user/groups", APIUserGroupHandler), # GET, POST
+    (r"/api/v1/user/settings", APIUserSettingsHandler), # GET, PUT
     # GET /api/v1/devices
     # POST /api/v1/user/devices/{serial}/remoteConnect
     # DELETE /api/v1/user/devices/{serial}/remoteConnect

@@ -117,3 +117,12 @@ class CorsMixin(object):
         # no body
         self.set_status(204)
         self.finish()
+
+
+def make_redirect_handler(url:str) -> tornado.web.RequestHandler:
+    class RedirectHandler(tornado.web.RequestHandler):
+        def get(self):
+            return self.redirect(url)
+
+    return RedirectHandler
+    

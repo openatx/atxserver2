@@ -9,7 +9,7 @@ from tornado.web import authenticated
 
 from ..database import db, time_now
 from ..libs import jsondate
-from .base import AuthRequestHandler, BaseWebSocketHandler
+from .base import AuthRequestHandler, BaseWebSocketHandler, BaseRequestHandler
 
 
 class AcquireError(Exception):
@@ -18,6 +18,25 @@ class AcquireError(Exception):
 
 class ReleaseError(Exception):
     pass
+
+
+class APIDeviceListHandler(BaseRequestHandler):
+    async def get(self):
+        devices = await db.table("devices").without(
+            "sources", "source").order_by(r.desc("createdAt")).all()
+        self.write_json({
+            "success": True,
+            "data": {
+                "devices": devices,
+                "count": await db.table("devices").count(),
+            }
+        })  # yapf: disable
+
+    # async def put(self):
+    #     """ modify data in database """
+    #     data = jsondate.loads(self.request.body)
+    #     ret = await db.table("devices").save(data)
+    #     self.write_json({"success": True, "data": ret})
 
 
 class APIUserDeviceHandler(AuthRequestHandler):
@@ -109,14 +128,15 @@ class AndroidDeviceControlHandler(AuthRequestHandler):
             self.render("remotecontrol_apple.html", udid=udid)
         else:
             self.render(
-                "error.html", message="Platform {} is not support remote control".format(platform))
+                "error.html",
+                message="Platform {} is not support remote control".format(
+                    platform))
 
     async def get(self, udid):
         device = await db.table("devices").get(udid).run()
         if not device:
             self.render("error.html", message="404 Device not found")
             return
-        platform = device['platform']
 
         if not device['present']:
             self.render("error.html", message="Device is offline")
@@ -157,24 +177,7 @@ class DeviceListHandler(AuthRequestHandler):
 
     async def get(self):
         """ get data from database """
-        if self.is_json_request or self.request.path == "/list":
-            devices = await db.table("devices").order_by(
-                r.desc("createdAt")).all()
-            self.write_json({
-                "success": True,
-                "data": {
-                    "devices": devices,
-                    "count": await db.table("devices").count(),
-                }
-            })  # yapf: disable
-            return
         self.render("index.html")
-
-    # async def put(self):
-    #     """ modify data in database """
-    #     data = jsondate.loads(self.request.body)
-    #     ret = await db.table("devices").save(data)
-    #     self.write_json({"success": True, "data": ret})
 
 
 class DeviceChangesWSHandler(BaseWebSocketHandler):
@@ -252,55 +255,7 @@ class D(object):
             raise ReleaseError("device not exist")
         if device.get('userId') != email:
             raise ReleaseError("device is not owned by you")
-        await self.update({
-            "using": False,
-            "userId": None
-        })
-
-
-# async def acquire_device(email: str, udid: str, idle_timeout: int = 600):
-#     """
-#     Raises:
-#         OccupyError
-#     """
-#     device = await db.table("devices").get(udid).run()
-#     if not device:
-#         raise AcquireError("device not exist")
-#     if not device.get('present'):
-#         raise AcquireError("device absent")
-#     if device.get('using'):
-#         if device.get('userId') == email:
-#             # already used by ..{email}
-#             return
-#         raise AcquireError("device busy")
-#     if device.get("colding"):
-#         raise AcquireError("device is colding")
-
-#     ret = await db.table("devices").get(udid).update({"using": True})
-#     if ret['skipped'] == 1:
-#         raise AcquireError(
-#             "not fast enough, device have been taken from others")
-#     await db.table("devices").get(udid).update({
-#         "userId": email,
-#         "usingBeganAt": time_now(),
-#         "lastActivatedAt": time_now(),
-#         "idleTimeout": idle_timeout,
-#     })
-
-# async def release_device(email: str, udid: str):
-#     """
-#     Raises:
-#         ReleaseError
-#     """
-#     device = await db.table("devices").get(udid).run()
-#     if not device:
-#         raise ReleaseError("device not exist")
-#     if device.get('userId') != email:
-#         raise ReleaseError("device is not owned by you")
-#     await db.table("devices").get(udid).update({
-#         "using": False,
-#         "userId": None
-#     })
+        await self.update({"using": False, "userId": None})
 
 
 class DeviceBookWSHandler(BaseWebSocketHandler):
