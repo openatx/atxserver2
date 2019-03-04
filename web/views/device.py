@@ -22,13 +22,13 @@ class ReleaseError(Exception):
 
 class APIDeviceListHandler(BaseRequestHandler):
     async def get(self):
-        devices = await db.table("devices").without(
-            "sources", "source").order_by(r.desc("createdAt")).all()
+        devices = await db.table_devices.without("sources", "source").order_by(
+            r.desc("createdAt")).all()
         self.write_json({
             "success": True,
             "data": {
                 "devices": devices,
-                "count": await db.table("devices").count(),
+                "count": await db.table_devices.count(),
             }
         })  # yapf: disable
 
@@ -59,7 +59,7 @@ class APIUserDeviceHandler(AuthRequestHandler):
             if s['priority'] > priority:
                 source = s
                 priority = s['priority']
-        data['bestSource'] = source
+        data['source'] = source
 
         self.write_json({
             "success": True,
@@ -72,7 +72,7 @@ class APIUserDeviceHandler(AuthRequestHandler):
             await self.get_device(udid)
             return
 
-        data = await db.table("devices").filter({
+        data = await db.table_devices.filter({
             "present": True,
             "using": True,
             "userId": self.current_user.email,
@@ -138,8 +138,8 @@ class AndroidDeviceControlHandler(AuthRequestHandler):
             self.render("error.html", message="404 Device not found")
             return
 
-        if not device['present']:
-            self.render("error.html", message="Device is offline")
+        if not device.get("sources"):
+            self.render("error.html", message="Device is not present")
             return
         if not device.get("using"):
             try:
@@ -186,7 +186,7 @@ class DeviceChangesWSHandler(BaseWebSocketHandler):
 
     async def open(self):
         self.__opened = True
-        conn, feed = await db.table("devices").watch()
+        conn, feed = await db.table_devices.watch()
         with conn:
             while await feed.fetch_next():
                 if not self.__opened:
@@ -224,7 +224,7 @@ class D(object):
         device = await db.table("devices").get(self.udid).run()
         if not device:
             raise AcquireError("device not exist")
-        if not device.get('present'):  # 设备离线
+        if not device.get('sources'):  # 设备离线
             raise AcquireError("device absent")
         if device.get('using'):  # 使用中
             if device.get('userId') == email:

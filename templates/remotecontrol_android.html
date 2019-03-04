@@ -11,6 +11,7 @@
   body,
   #content-wrapper {
     height: 100%;
+    overflow: hidden;
   }
 
   #content-wrapper {
@@ -146,7 +147,7 @@
         </span>
         <span>
           <i v-if="!websockets.winput" class="fas fa-keyboard" style="color: red"></i>
-          <i v-if="!whatsinput.disabled" class="fas fa-keyboard" style="color: green"></i>
+          <i v-else-if="!whatsinput.disabled" class="fas fa-keyboard" style="color: green"></i>
           <i v-else class="fas fa-keyboard" style="color:gray"></i>
         </span>
         <span>
@@ -1137,7 +1138,7 @@
         },
         computed: {
           address() {
-            return this.bestSource.deviceAddress
+            return this.source.deviceAddress
           },
           deviceUrl() {
             return "http://" + this.address
@@ -1149,7 +1150,7 @@
             return "http://" + this.address + "/screenshot"
           },
           whatsinputUrl() {
-            return "ws://" + this.bestSource.whatsinputAddress
+            return "ws://" + this.source.whatsinputAddress
           },
           displayLinked() {
             return this.websockets.screen !== null;

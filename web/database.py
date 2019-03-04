@@ -59,7 +59,7 @@ class DB(object):
             safe_run(rdb.table_create(table_name, primary_key=primary_key))
 
         # reset database
-        safe_run(rdb.table("devices").update({"present": False}))
+        # safe_run(rdb.table("devices").update({"present": False})) # Need to delete
         safe_run(rdb.table("devices").replace(lambda q: q.without("sources")))
 
         r.set_loop_type("tornado")
@@ -82,6 +82,15 @@ class DB(object):
         """
         pkey = self.__tables.get(name, {}).get("primary_key")
         return TableHelper(self, r.table(name), pkey=pkey)
+
+    @property
+    def table_devices(self):
+        def _fn(v):
+            return {
+                "present": v.get_field("sources").default({}).count().gt(0)
+            }
+
+        return self.table("devices").merge(_fn)
 
     # def tableof(self, name):
     #     """

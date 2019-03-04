@@ -80,7 +80,6 @@ class ProviderHeartbeatWSHandler(BaseWebSocketHandler):
             "command": "update",
             "udid": "xxx12312312",
             "platform": "android",
-            "present": true,
             "provider": {
                 "deviceAddress": "....",
                 "remoteConnectAddress": "....", # 远程连接用
@@ -133,10 +132,9 @@ class ProviderHeartbeatWSHandler(BaseWebSocketHandler):
             #
             await db.table("devices").replace(inner)
 
-            # set present,using to false if there is no sources
+            # set using to false if there is no sources
             filter_rule = r.row["sources"].default({}).keys().count().eq(0)
             await db.table("devices").filter(filter_rule).update({
-                "present": False,
                 "using": False,
             }) # yapf: disable
 
