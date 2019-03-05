@@ -40,7 +40,6 @@ class ProviderHeartbeatWSHandler(BaseWebSocketHandler):
         self._owner = None
         self._id = None
         self._info = None
-        self._priority = 0
 
     def open(self):
         """
@@ -62,17 +61,20 @@ class ProviderHeartbeatWSHandler(BaseWebSocketHandler):
         """
         identify slave self
 
-        {"command": "handshake",
-         "name": "ccddqq",
+        {"name": "ccddqq",
+         "url": "http://xlksdf.com",
+         "secret": "xxxxxx....",
          "owner": "someone@domain.com"}
         """
         assert "name" in req
+        assert "url" in req
+        assert "owner" in req
+        assert "secret" in req
         assert "priority" in req
-        req.pop("command", None)
+
         self._id = req['id'] = str(uuid.uuid1())
         self._info = req
-        self._priority = req['priority']
-        self.write_message("you are online " + req['name'])
+        self.write_message("you are online " + req['name'] + " ID:" + self._id)
 
     async def _on_update(self, req):
         """
@@ -96,7 +98,7 @@ class ProviderHeartbeatWSHandler(BaseWebSocketHandler):
         udid = updates['udid']
         assert isinstance(udid, str)
 
-        source = updates.pop('provider', None)
+        source = updates.pop('provider', {})
         if source is None:
             # remove source
             await db.table("devices").get(udid).replace(lambda q: q.without(
@@ -105,7 +107,7 @@ class ProviderHeartbeatWSHandler(BaseWebSocketHandler):
                 }}))
         else:
             # one device may contains many sources
-            source['priority'] = self._priority
+            source.update(self._info)
             updates['sources'] = {
                 self._id: source,
             }

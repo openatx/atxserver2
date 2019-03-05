@@ -6,10 +6,12 @@ import json
 import rethinkdb as r
 from logzero import logger
 from tornado.web import authenticated
+from tornado.ioloop import IOLoop
+from tornado.httpclient import AsyncHTTPClient, HTTPRequest
 
 from ..database import db, time_now
 from ..libs import jsondate
-from .base import AuthRequestHandler, BaseWebSocketHandler, BaseRequestHandler
+from .base import AuthRequestHandler, BaseWebSocketHandler, BaseRequestHandler, CORSBaseRequestHandler
 
 
 class AcquireError(Exception):
@@ -20,7 +22,7 @@ class ReleaseError(Exception):
     pass
 
 
-class APIDeviceListHandler(BaseRequestHandler):
+class APIDeviceListHandler(CORSBaseRequestHandler):
     async def get(self):
         devices = await db.table_devices.without("sources", "source").order_by(
             r.desc("createdAt")).all()
@@ -192,7 +194,6 @@ class DeviceChangesWSHandler(BaseWebSocketHandler):
                 if not self.__opened:
                     break
                 data = await feed.next()
-                logger.info("feed data: %s", data)
                 self.write_json({
                     "event": "insert" if data['old_val'] is None else 'update',
                     "data": data['new_val'],
@@ -255,7 +256,27 @@ class D(object):
             raise ReleaseError("device not exist")
         if device.get('userId') != email:
             raise ReleaseError("device is not owned by you")
-        await self.update({"using": False, "userId": None})
+        # 设备先要冷却一下(Provider清理并检查设备)
+        await self.update({"using": False, "userId": None, "colding": True})
+        source = device2source(device)
+        if not source:  # 设备离线了
+            return
+
+        async def cold_device():
+            from tornado.httpclient import AsyncHTTPClient, HTTPRequest
+            http_client = AsyncHTTPClient()
+            secret = source.get('secret', '')
+            url = source['url'] + "/" + device['udid'] + "?secret=" + secret
+            request = HTTPRequest(url, method="DELETE")
+            await http_client.fetch(request)
+
+        IOLoop.current().add_callback(cold_device)
+
+
+def device2source(device: dict):
+    sources = device.get('sources', {}).values()
+    for s in sorted(sources, key=lambda v: v['priority'], reverse=True):
+        return s
 
 
 class DeviceBookWSHandler(BaseWebSocketHandler):
