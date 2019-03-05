@@ -31,7 +31,8 @@ def main():
         "openid": OpenIdLoginHandler,
     }
 
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     # yapf: disable
     parser.add_argument('-p', '--port', type=int,
                         default=4000, help='listen port')
