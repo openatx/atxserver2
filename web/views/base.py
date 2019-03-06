@@ -18,12 +18,32 @@ class CurrentUserMixin(object):
     def bunchify(self, d: dict):
         return Bunch(d) if d else None
 
+    @property
+    def is_json_request(self):
+        if self.get_argument('json', None) is not None:
+            return True
+        if self.request.headers.get("Content-Type") == "application/json":
+            return True
+        return False
+
     async def get_current_user_async(self) -> Bunch:
         """
         method get_current_user can not be sync, so init current_user in in prepare
 
         Refs: https://www.tornadoweb.org/en/stable/guide/security.html#user-authentication
         """
+        auth_content = self.request.headers.get('Authorization', '')
+        if auth_content:
+            auth_prefix = 'Bearer '
+            if auth_content.startswith(auth_prefix):
+                token = auth_content[len(auth_prefix):]
+                # TODO(ssx): change to the real token instead of secretKey
+                print("TOKEN:", auth_content, self.request.headers, token)
+                users = await db.table("users").filter({"token": token}).all()
+                if len(users) == 1:
+                    return self.bunchify(users[0])
+            raise tornado.web.HTTPError(403)
+
         id = self.get_secure_cookie("user_id")  # here is bytes not str
         if id:
             id = id.decode()
@@ -36,11 +56,13 @@ class CurrentUserMixin(object):
             "username": username
         })
         if ret['inserted']:
-            await db.table("users").save({
-                "secretKey": "S:" + str(uuid.uuid4()),
-                "createdAt": time_now(),
-                "lastLoggedInAt": time_now(),
-            }, ret['id'])
+            await db.table("users").save(
+                {
+                    "secretKey": "S:" + str(uuid.uuid4()),
+                    "token": str(uuid.uuid4()).replace("-", ""),
+                    "createdAt": time_now(),
+                    "lastLoggedInAt": time_now(),
+                }, ret['id'])
         elif ret['unchanged']:
             await db.table("users").save({
                 "lastLoggedInAt": time_now(),
@@ -66,10 +88,6 @@ class BaseRequestHandler(CurrentUserMixin, tornado.web.RequestHandler):
 
     def get_payload(self):
         return json_decode(self.request.body)
-
-    @property
-    def is_json_request(self):
-        return self.get_argument('json', None) is not None
 
     async def get(self, *args):
         if self.get_argument('json', None) is not None:

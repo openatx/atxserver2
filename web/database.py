@@ -59,7 +59,7 @@ class DB(object):
             safe_run(rdb.table_create(table_name, primary_key=primary_key))
 
         # reset database
-        # safe_run(rdb.table("devices").update({"present": False})) # Need to delete
+        safe_run(rdb.table("users").index_create("token"))
         safe_run(rdb.table("devices").replace(lambda q: q.without("sources")))
 
         r.set_loop_type("tornado")
