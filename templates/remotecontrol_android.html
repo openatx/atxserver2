@@ -354,31 +354,8 @@
   const udid = "{{udid}}"
   const userEmail = "{{current_user.email}}"
 
-  function closeWindowWhenReleased() {
-    setTimeout(function () {
-      // FIXME(ssx): maybe websocket is better
-      $.getJSON("/api/v1/user/devices/" + udid)
-        .done(function (ret) {
-          // console.log(ret.data.userId)
-          if (ret.data.userId !== userEmail) {
-            window.close()
-          }
-          closeWindowWhenReleased()
-        })
-        .fail(function (ret) {
-          console.log(ret)
-          alert("Fail connect to server")
-          window.close()
-          // closeWindowWhenReleased()
-        })
-    }, 2000)
-  }
-
   $.getJSON("/api/v1/user/devices/" + udid)
     .then(ret => {
-
-      closeWindowWhenReleased()
-
       vm = new Vue({
         el: "#content-wrapper",
         data: Object.assign({
@@ -1086,6 +1063,36 @@
             img.src = url;
             return dtd;
           },
+          closeWindowWhenReleased(interval) {
+            setTimeout(() => {
+              if (document.hidden) {
+                $.getJSON("/api/v1/user/devices/" + udid)
+                  .done(ret => {
+                    this.closeWindowWhenReleased(5000)
+                  })
+                  .fail(ret => {
+                    let content = '设备' + this.idleTimeout + "秒内没有操作，设备自动释放，点击刷新重新占用该设备"
+                    this.$alert(content, '设备超时提示', {
+                      confirmButtonText: '刷新',
+                      type: 'warning'
+                    }).then(() => {
+                      location.reload()
+                    }).catch(() => {
+                      window.close()
+                    })
+                  })
+              } else {
+                $.getJSON("/api/v1/user/devices/" + udid + "/active")
+                  .done((ret) => {
+                    this.closeWindowWhenReleased(interval)
+                  })
+                  .fail(function (ret) {
+                    console.log(ret)
+                    alert("设备可能被释放了，Press F12 to debug")
+                  })
+              }
+            }, interval)
+          }
         },
         mounted: function () {
           this.canvas.bg = this.$refs.bgCanvas
@@ -1135,6 +1142,9 @@
 
           // 加载whatsinput输入法
           this.loadWhatsinput()
+
+          // 当设备不使用时自动退出
+          this.closeWindowWhenReleased(this.idleTimeout / 2 * 1000)
         },
         computed: {
           address() {

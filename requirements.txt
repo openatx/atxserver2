@@ -1,6 +1,6 @@
 bunch
 logzero
-rethinkdb
+rethinkdb==2.3.0.post6
 tornado==4.5.3
 requests
 apkutils

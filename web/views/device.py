@@ -2,16 +2,18 @@
 #
 
 import json
+import datetime
 
 import rethinkdb as r
 from logzero import logger
 from tornado.web import authenticated
 from tornado.ioloop import IOLoop
 from tornado.httpclient import AsyncHTTPClient, HTTPRequest
+from tornado import gen
 
 from ..database import db, time_now
 from ..libs import jsondate
-from .base import AuthRequestHandler, BaseWebSocketHandler, BaseRequestHandler, CORSBaseRequestHandler
+from .base import AuthRequestHandler, BaseWebSocketHandler, BaseRequestHandler, CorsMixin
 
 
 class AcquireError(Exception):
@@ -22,7 +24,7 @@ class ReleaseError(Exception):
     pass
 
 
-class APIDeviceListHandler(CORSBaseRequestHandler):
+class APIDeviceListHandler(CorsMixin, BaseRequestHandler):
     async def get(self):
         devices = await db.table_devices.without("sources", "source").order_by(
             r.desc("createdAt")).all()
@@ -41,6 +43,29 @@ class APIDeviceListHandler(CORSBaseRequestHandler):
     #     self.write_json({"success": True, "data": ret})
 
 
+class APIUserDeviceActiveHandler(AuthRequestHandler):
+    """ active update time """
+
+    async def get(self, udid):
+        # """ update lastActivatedAt """
+        ret = await db.table("devices").filter({
+            "using": True,
+            "udid": udid,
+            "userId": self.current_user.email
+        }).update({"lastActivatedAt": time_now()}) # yapf: disable
+        if ret['replaced']:
+            self.write_json({
+                "success": True,
+                "description": "Device activated time is updated"
+            })
+        else:
+            self.set_status(400)
+            self.write_json({
+                "success": False,
+                "description": "Device is not owned by you"
+            })
+
+
 class APIUserDeviceHandler(AuthRequestHandler):
     """ device Acquire and Release """
 
@@ -52,6 +77,13 @@ class APIUserDeviceHandler(AuthRequestHandler):
                 "success": False,
                 "description": "device not found " + id,
             })
+            return
+        if data.get('userId') != self.current_user.email:
+            self.set_status(403)
+            self.write_json({
+                "success": False,
+                "description": "you have to acquire it before access device info",
+            }) # yapf: disable
             return
 
         # Find the highest priority source
@@ -217,10 +249,10 @@ class D(object):
     async def update(self, data: dict):
         return await db.table("devices").get(self.udid).update(data)
 
-    async def acquire(self, email: str, idle_timeout: int = 100):
+    async def acquire(self, email: str, idle_timeout: int = 10):
         """
         Raises:
-            OccupyError
+            AcquireError
         """
         device = await db.table("devices").get(self.udid).run()
         if not device:
@@ -239,12 +271,51 @@ class D(object):
         if ret['skipped'] == 1:  # 被其他人占用了
             raise AcquireError(
                 "not fast enough, device have been taken from others")
+        now = time_now()
         await self.update({
             "userId": email,
-            "usingBeganAt": time_now(),
-            "lastActivatedAt": time_now(),
+            "usingBeganAt": now,
+            "lastActivatedAt": now,
             "idleTimeout": idle_timeout,
         })
+        self.check_background(device)  # release when idleTimeout
+
+    def _next_check_after(self, device) -> int:
+        print("ACT", device['lastActivatedAt'], device['idleTimeout'], "NOW",
+              time_now())
+        time_deadline = device['lastActivatedAt'] + datetime.timedelta(
+            seconds=device['idleTimeout'])
+        delta = time_deadline - time_now()
+        return max(0, int(delta.total_seconds()))
+
+    def check_background(self, device: dict):
+        began_at = device['usingBeganAt']
+        after_seconds = self._next_check_after(device) + 3
+        logger.info("First check after %d seconds", after_seconds)
+        IOLoop.current().spawn_callback(self._check, began_at, after_seconds)
+
+    async def _check(self, began_at: datetime.datetime.time,
+                     idle_timeout: int):
+        """ when time_now > lastActivatedAt + idleTimeout, release device """
+        await gen.sleep(idle_timeout)
+        min_timedelta = datetime.timedelta(seconds=1)
+
+        device = await db.table("devices").get(self.udid).run()
+        # 当开始使用时间不一致时，说明设备已经换人了
+        if began_at - device['usingBeganAt'] > min_timedelta:
+            logger.info("_check different began_at %s != %s",
+                        device['usingBeganAt'], began_at)
+            return
+
+        # calculate left time
+        left_seconds = self._next_check_after(device)
+        logger.info("Left seconds: %s", left_seconds)
+        if left_seconds == 0:
+            await self.release(device['userId'])
+            return
+
+        # 等待进入下一次检查
+        IOLoop.current().add_callback(self._check, began_at, left_seconds + 3)
 
     async def release(self, email: str):
         """

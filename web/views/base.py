@@ -102,21 +102,6 @@ class BaseRequestHandler(CurrentUserMixin, tornado.web.RequestHandler):
         pass
 
 
-class CORSBaseRequestHandler(BaseRequestHandler):
-    def set_default_headers(self):
-        # yapf: disable
-        self.set_header("Access-Control-Allow-Origin", "*")  # 这个地方可以写域名
-        self.set_header("Access-Control-Allow-Headers", "x-requested-with")
-        self.set_header("Access-Control-Allow-Headers", "content-type,data-type")
-        self.set_header('Access-Control-Allow-Methods', 'POST, GET, DELETE, PUT, OPTIONS')
-        # yapf: enable
-
-    def options(self):
-        # no body
-        self.set_status(204)
-        self.finish()
-
-
 class AuthRequestHandler(BaseRequestHandler):
     """ request user logged in before http request """
 
@@ -140,7 +125,7 @@ class CorsMixin(object):
     CORS_ORIGIN = '*'
     CORS_METHODS = 'GET,POST,OPTIONS'
     CORS_CREDENTIALS = True
-    CORS_HEADERS = "x-requested-with"
+    CORS_HEADERS = "x-requested-with,authorization"
 
     def set_default_headers(self):
         self.set_header("Access-Control-Allow-Origin", self.CORS_ORIGIN)
