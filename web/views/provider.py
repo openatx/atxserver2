@@ -92,7 +92,7 @@ class ProviderHeartbeatWSHandler(BaseWebSocketHandler):
         }
         """
         import pprint
-        pprint.pprint(req)
+        # pprint.pprint(req)
 
         updates = req.copy()
         udid = updates['udid']
@@ -122,7 +122,7 @@ class ProviderHeartbeatWSHandler(BaseWebSocketHandler):
         """
         {"command": "ping"} // ping, update
         """
-        logger.info("receive message: %s", message)
+        # logger.info("receive message: %s", message)
 
     def on_close(self):
         logger.info("websocket closed: %s", self.request.remote_ip)

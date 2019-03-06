@@ -249,7 +249,7 @@ class D(object):
     async def update(self, data: dict):
         return await db.table("devices").get(self.udid).update(data)
 
-    async def acquire(self, email: str, idle_timeout: int = 10):
+    async def acquire(self, email: str, idle_timeout: int = 10 * 60):
         """
         Raises:
             AcquireError
@@ -278,31 +278,32 @@ class D(object):
             "lastActivatedAt": now,
             "idleTimeout": idle_timeout,
         })
-        self.check_background(device)  # release when idleTimeout
+        self.check_background()  # release when idleTimeout
+
+    def check_background(self):
+        async def first_check():
+            device = await db.table("devices").get(self.udid).run()
+            began_at = device['usingBeganAt']
+            after_seconds = self._next_check_after(device) + 3
+            logger.info("First check after %d seconds", after_seconds)
+            IOLoop.current().add_callback(self._check, began_at, after_seconds)
+
+        IOLoop.current().spawn_callback(first_check)
 
     def _next_check_after(self, device) -> int:
-        print("ACT", device['lastActivatedAt'], device['idleTimeout'], "NOW",
-              time_now())
         time_deadline = device['lastActivatedAt'] + datetime.timedelta(
             seconds=device['idleTimeout'])
         delta = time_deadline - time_now()
         return max(0, int(delta.total_seconds()))
 
-    def check_background(self, device: dict):
-        began_at = device['usingBeganAt']
-        after_seconds = self._next_check_after(device) + 3
-        logger.info("First check after %d seconds", after_seconds)
-        IOLoop.current().spawn_callback(self._check, began_at, after_seconds)
-
     async def _check(self, began_at: datetime.datetime.time,
                      idle_timeout: int):
         """ when time_now > lastActivatedAt + idleTimeout, release device """
         await gen.sleep(idle_timeout)
-        min_timedelta = datetime.timedelta(seconds=1)
 
         device = await db.table("devices").get(self.udid).run()
         # 当开始使用时间不一致时，说明设备已经换人了
-        if began_at - device['usingBeganAt'] > min_timedelta:
+        if began_at != device['usingBeganAt']:
             logger.info("_check different began_at %s != %s",
                         device['usingBeganAt'], began_at)
             return

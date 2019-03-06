@@ -541,7 +541,7 @@
               method: "delete",
               url: "/api/v1/user/devices/" + this.udid,
               dataType: "json"
-            }).then(ret => {
+            }).always(() => {
               window.close()
             })
           },

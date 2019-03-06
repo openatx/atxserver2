@@ -62,6 +62,17 @@ class DB(object):
         safe_run(rdb.table("users").index_create("token"))
         safe_run(rdb.table("devices").replace(lambda q: q.without("sources")))
 
+        # reload add idle check functions
+        from .views.device import D  # must import in here
+
+        devices = safe_run(
+            rdb.table("devices").filter({
+                "using": True
+            }).pluck("udid"))
+        for d in devices:
+            logger.debug("Device: %s is in using state", d['udid'])
+            D(d['udid']).check_background()
+
         r.set_loop_type("tornado")
 
     async def connection(self):
