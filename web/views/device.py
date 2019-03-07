@@ -278,9 +278,9 @@ class D(object):
             "lastActivatedAt": now,
             "idleTimeout": idle_timeout,
         })
-        self.check_background()  # release when idleTimeout
+        self.release_until_idle()  # release when idleTimeout
 
-    def check_background(self):
+    def release_until_idle(self):
         async def first_check():
             device = await db.table("devices").get(self.udid).run()
             began_at = device['usingBeganAt']

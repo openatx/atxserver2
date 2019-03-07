@@ -17,11 +17,12 @@
   #content-wrapper {
     display: flex;
     flex-direction: column;
+    justify-content: flex-start;
   }
 
   #app {
     display: flex;
-    flex-grow: 1;
+    flex: 1;
   }
 
   .height100 {
@@ -40,17 +41,12 @@
     padding: 0px;
   }
 
-  .color-right {
-    background-color: yellowgreen;
-    color: white;
+  .color-blue {
+    color: blue;
   }
 
   .cursor-pointer {
     cursor: pointer;
-  }
-
-  .color-wrong {
-    color: red;
   }
 
   .debugarea {
@@ -90,7 +86,7 @@
 {% end %}
 
 {% block nav %}
-<nav class="navbar sticky-top navbar-expand-lg navbar-dark bg-dark">
+<nav class="navbar sticky-top navbar-expand-lg navbar-dark bg-dark" style="height: 55px;">
   <div class="container-fluid">
     <a class="navbar-brand" href="/">
       <span class="title">ATXServer2</span></a>
@@ -133,8 +129,8 @@
 {% block content %}
 <div class="container-fluid d-flex flex-column">
   <div class="row grow-1">
-    <div class="col-sm debugarea d-flex flex-column justify-content-center nopadding grow-0">
-      <section class="debugarea" style="height: 2rem; line-height: 2rem; justify-self: start">
+    <div class="col-sm debugarea d-flex flex-column justify-content-center nopadding grow-0 height100">
+      <section class="debugarea" style="height: 32px; line-height: 32px; justify-self: start">
         {{!properties.serial}}
         <span>
           <i v-if="displayLinked" @click="closeMirrorDisplay" class="fas fa-link" style="color: green"></i>
@@ -155,8 +151,8 @@
         </span>
 
       </section>
-      <section class="screen debugarea d-flex grow-1 align-items-center justify-content-center" style="line-height: 0px"
-        @dblclick="runKeyevent('WAKEUP')">
+      <section class="screen debugarea d-flex grow-1 align-items-center justify-content-center"
+        style="flex: 1; line-height: 0px" @dblclick="runKeyevent('WAKEUP')">
         <!-- <canvas ref="fgCanvas" class="canvas-fg" v-bind:style="canvasStyle"></canvas> -->
         <canvas ref="bgCanvas" class="canvas-bg" v-bind:style="canvasStyle"></canvas>
         <span class="finger finger-0" style="transform: translate3d(200px, 100px, 0px)"></span>
@@ -177,7 +173,7 @@
         </button>
       </section>
     </div>
-    <div class="col-sm debugarea height100" style="overflow-y: auto">
+    <div class="col-sm debugarea height100" style="min-height: 0; overflow-y: auto">
       <el-tabs v-model="activeName" @tab-click="handleTabClick">
         <el-tab-pane label="常用" name="common">
           <div ref="commonContainer" class="row">
@@ -209,17 +205,25 @@
                 <div class="col-12 bottom-gutter">
                   <div class="card">
                     <div class="card-header">
-                      ATX
+                      <i class="far fa-address-card"></i> 常用地址
                     </div>
                     <div class="card-body">
-                      {{!address}}
+                      <dl>
+                        <dt>ATX-AGENT地址</dt>
+                        <dd><code v-text="address"></code></dd>
+                        <dt>ADB远程连接</dt>
+                        <dd><code v-text="remoteConnectAddr"></code>
+                          <i :data-clipboard-text="remoteConnectAddr"
+                            class="far fa-copy clipboard-copy cursor-pointer"></i>
+                        </dd>
+                      </dl>
                     </div>
                   </div>
                 </div>
                 <div class="col-12 bottom-gutter">
-                  <div class="card bottom-gutter">
+                  <div class="card">
                     <div class="card-header">
-                      <i class="fa fa-dashboard"></i>
+                      <i class="fas fa-blind"></i>
                       快捷入口
                     </div>
                     <div class="card-body">
@@ -245,16 +249,8 @@
                       </button>
                       <hr>
                       <span v-for="v in userSettings.shortcuts" style="margin-right: 5px">
-                        <el-popover trigger="hover" placement="top" min-width="160">
-                          <code v-text="v.command"></code>
-                          <div style="text-align: right; margin: 0">
-                            <el-button @click="removeShortcut(v)" type="danger" icon="el-icon-delete" size="mini"
-                              circle>
-                            </el-button>
-                          </div>
-                          <el-button size="small" round slot="reference" @click="triggerShortcut(v)">
-                            {{!v.name}}</el-button>
-                        </el-popover>
+                        <el-button round size="small" :title="v.command" @click.exact="triggerShortcut(v)"
+                          @click.alt.exact="removeShortcut(v)">{{!v.name}}</el-button>
                       </span>
                       <el-popover placement="right" width="400" trigger="click" v-model="userSettings.visible">
                         <div>
@@ -269,9 +265,10 @@
                           </div>
                           <el-button size="small" @click="addShortcut">添加</i>
                         </div>
-                        <el-button size="small" round slot="reference"><i class="fas fa-plus"></i>
+                        <el-button title="Alt+左键 删除" size="small" round slot="reference"><i class="fas fa-plus"></i>
                         </el-button>
                       </el-popover>
+                      <!-- <div style="color: gray; font-size: 0.6em; text-align: right">Alt+左键 删除</div> -->
                       <!-- more https://stackoverflow.com/questions/38051706/i-am-trying-to-launch-settings-through-adb-using-the-adb-monkey-command-but-it-->
                     </div>
                   </div>
@@ -281,17 +278,40 @@
             <div :class="tabColumnStyle">
               <div class="row">
                 <div class="col-12 bottom-gutter">
-                  <div class="card bottom-gutter">
+                  <div class="card">
                     <div class="card-header">
                       <i class="fa fa-globe"></i>
                       浏览器打开URL
                     </div>
                     <div class="card-body">
-                      <textarea class="form-control" placeholder="在这里输入URL" rows=3 v-model="browserURL"
+                      <textarea class="form-control" placeholder="在这里输入URL" rows=2 v-model="browserURL"
                         @keyup.enter="openBrowser(browserURL)"></textarea>
                       <div style="padding-top: 5px">
-                        <button type="button" class="btn btn-primary float-right"
+                        <button type="button" class="btn btn-primary btn-sm float-right"
                           @click='openBrowser(browserURL)'>打开</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-12 bottom-gutter">
+                  <div class="card">
+                    <div class="card-header">
+                      <i class="fab fa-app-store-ios"></i>
+                      当前应用
+                    </div>
+                    <div class="card-body">
+                      <div class="form-group">
+                        <input v-model="topApp.packageName" class="form-control form-control-sm"
+                          placeholder="PackageName">
+                      </div>
+                      <div class="form-group">
+                        <input v-model="topApp.activity" class="form-control form-control-sm" placeholder="Activity">
+                      </div>
+                      <div class="btn-group">
+                        <button type="button" class="btn btn-sm btn-outline-primary" @click="refreshTopApp"><i
+                            class="fas fa-sync"></i> 刷新</button>
+                        <button type="button" :disabled="!topApp.packageName" class="btn btn-sm btn-outline-primary"
+                          @click="addTopAppToShortcut"><i class="fas fa-blind"></i> 添加到快捷入口</button>
                       </div>
                     </div>
                   </div>
@@ -346,6 +366,8 @@
 {% end %}
 
 {% block script %}
+<script src="https://cdn.jsdelivr.net/npm/popper.js@1.14.7/dist/umd/popper.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/clipboard@2.0.4/dist/clipboard.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xterm@2.9.2/dist/xterm.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xterm@2.9.2/dist/addons/fit/fit.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/css-element-queries@1.1.1/src/ResizeSensor.min.js"></script>
@@ -381,6 +403,11 @@
             text: "",
             disabled: true,
           },
+          topApp: {
+            packageName: '',
+            activity: '',
+            pid: '',
+          },
           imagePool: new ImagePool(100),
           browserURL: "",
           tabColumnStyle: 'col-6',
@@ -395,6 +422,17 @@
           }, {}),
         }, ret.data),
         methods: {
+          addTopAppToShortcut() {
+            this.$prompt('给 <code>' + this.topApp.packageName + '</code> 起个名字', '快捷方式添加', {
+              confirmButtonText: '确定',
+              cancelButtonText: '取消',
+              dangerouslyUseHTMLString: true,
+            }).then(({ value }) => {
+              let command = ["monkey", "-p", this.topApp.packageName, "-c", "android.intent.category.LAUNCHER", "1"].join(" ")
+              this.addShortcut(value, command)
+            }).catch(() => {
+            })
+          },
           fixInputMethod() {
             this.$notify.info({
               title: "输入法",
@@ -416,9 +454,9 @@
               })
           },
           loadWhatsinput(callback) {
-            console.log(this.whatsinputUrl)
+            console.log(this.whatsInputUrl)
             let defer = $.Deferred()
-            let ws = new WebSocket(this.whatsinputUrl)
+            let ws = new WebSocket(this.whatsInputUrl)
             this.websockets.winput = ws;
             ws.onopen = (ev) => {
               defer.resolve()
@@ -498,15 +536,14 @@
               console.log("Shell", v.command, "output", ret)
             })
           },
-          addShortcut() {
+          addShortcut(name, command) {
+            name = name || s.inputName
+            command = command || s.inputCommand
             let s = this.userSettings
-            if (!s.inputName || !s.inputCommand) {
+            if (!name || !command) {
               return
             }
-            s.shortcuts.push({
-              name: s.inputName,
-              command: s.inputCommand,
-            })
+            s.shortcuts.push({ name, command })
             s.inputName = ""
             s.inputCommand = ""
             s.visible = false;
@@ -1092,6 +1129,42 @@
                   })
               }
             }, interval)
+          },
+          initClipboardJS() {
+            var clipboard = new ClipboardJS(".clipboard-copy")
+
+            clipboard.on('success', function (e) {
+              e.clearSelection()
+              showTooltip(e.trigger, "Copied!")
+            })
+
+            document.querySelectorAll(".clipboard-copy").forEach(e => {
+              e.addEventListener('mouseleave', clearTooltip);
+              e.addEventListener('blur', clearTooltip);
+            })
+
+            function clearTooltip(e) {
+              const target = e.currentTarget;
+              setTimeout(() => {
+                target.innerHTML = ""
+              }, 200)
+            }
+
+            function showTooltip(elem, msg) {
+              elem.innerHTML = "&nbsp;<small>" + msg + "</small>"
+            }
+          },
+          refreshTopApp() {
+            this.runShell("dumpsys activity top").then(ret => {
+              const reActivity = String.raw`\s*ACTIVITY ([A-Za-z0-9_.]+)\/([A-Za-z0-9_.]+) \w+ pid=(\d+)`
+              let matches = ret.output.match(new RegExp(reActivity, "g"))
+              if (matches.length > 0) {
+                let m = matches.pop().match(new RegExp(reActivity))
+                this.topApp.packageName = m[1];
+                this.topApp.activity = m[2]
+                this.topApp.pid = m[3]
+              }
+            })
           }
         },
         mounted: function () {
@@ -1144,11 +1217,14 @@
           this.loadWhatsinput()
 
           // 当设备不使用时自动退出
-          this.closeWindowWhenReleased(this.idleTimeout / 2 * 1000)
+          console.log("Refresh:", this.idleTimeout / 2 * 1000)
+          this.closeWindowWhenReleased(5000)
+
+          this.initClipboardJS()
         },
         computed: {
           address() {
-            return this.source.deviceAddress
+            return this.source.atxAgentAddress
           },
           deviceUrl() {
             return "http://" + this.address
@@ -1159,8 +1235,11 @@
           screenshotUrl() {
             return "http://" + this.address + "/screenshot"
           },
-          whatsinputUrl() {
-            return "ws://" + this.source.whatsinputAddress
+          remoteConnectAddr() {
+            return "adb connect " + this.source.remoteConnectAddress
+          },
+          whatsInputUrl() {
+            return "ws://" + this.source.whatsInputAddress
           },
           displayLinked() {
             return this.websockets.screen !== null;

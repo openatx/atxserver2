@@ -71,7 +71,7 @@ class DB(object):
             }).pluck("udid"))
         for d in devices:
             logger.debug("Device: %s is in using state", d['udid'])
-            D(d['udid']).check_background()
+            D(d['udid']).release_until_idle()
 
         r.set_loop_type("tornado")
 
