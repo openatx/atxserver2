@@ -133,8 +133,8 @@
       <section class="debugarea" style="height: 32px; line-height: 32px; justify-self: start">
         {{!properties.serial}}
         <span>
-          <i v-if="displayLinked" @click="closeMirrorDisplay" class="fas fa-link" style="color: green"></i>
-          <i v-else @click="mirrorDisplay" class="fas fa-unlink" style="color: red"></i>
+          <i v-if="displayLinked" @click="closeDisplayTouchpad" class="fas fa-link" style="color: green"></i>
+          <i v-else @click="openDisplayTouchpad" class="fas fa-unlink" style="color: red"></i>
         </span>
         <span>
           <i v-if="websockets.touchpad != null" @click="closeSyncTouchpad" class="fas fa-mouse-pointer"
@@ -671,14 +671,20 @@
               console.log(evt)
             }
           },
-          mirrorDisplay() {
+          openDisplayTouchpad() {
+            this.mirrorDisplay()
             this.syncTouchpad()
-
+          },
+          closeDisplayTouchpad() {
+            this.closeMirrorDisplay()
+            this.closeSyncTouchpad()
+          },
+          mirrorDisplay() {
             let ws = new WebSocket(this.deviceUrl.replace(/^http/, "ws") + '/minicap');
             this.websockets.screen = ws;
 
             ws.onopen = (ev) => {
-              console.log('screen websocket connected')
+              console.log('minicap connected')
               this.canvasStyle.opacity = 1;
             };
             ws.onmessage = (message) => {
@@ -688,20 +694,19 @@
                 // console.log("receive message:", message.data)
               } else if (/^rotation/.test(message.data)) {
                 this.rotation = parseInt(message.data.substr('rotation '.length), 10);
-                console.log(this.rotation)
+                console.log("rotation:", this.rotation)
               } else {
                 console.log("receive message:", message.data)
               }
             }
             ws.onclose = (ev) => {
               if (this.websockets.screen === ws) {
+                console.log("minicap closed")
                 this.websockets.screen = null;
-                console.log("websocket op", this.canvasStyle.opacity)
                 this.$message({
                   showClose: true,
                   message: '设备屏幕同步中断',
                   type: 'error',
-                  // duration: 0,
                 });
                 this.canvasStyle.opacity = 0.5;
               }
@@ -714,10 +719,8 @@
             this.canvasStyle.opacity = 0.5;
             if (this.websockets.screen) {
               let ws = this.websockets.screen;
-              this.websockets.screen = null;
               ws.close()
             }
-            this.closeSyncTouchpad()
           },
           syncTouchpad() {
             let element = this.canvas.bg; // maybe fg is better
@@ -729,7 +732,7 @@
             this.websockets.touchpad = ws
 
             ws.onopen = (ret) => {
-              console.log("minitouch synced")
+              console.log("minitouch connected")
               touchReset() // fix when device is out of control
             }
             ws.onmessage = (message) => {
@@ -737,6 +740,7 @@
             }
             ws.onclose = () => {
               if (this.websockets.touchpad === ws) {
+                console.log("minitouch closed")
                 this.websockets.touchpad = null;
               }
               element.removeEventListener('mousedown', mouseDownListener);
@@ -1171,8 +1175,8 @@
           this.canvas.bg = this.$refs.bgCanvas
           this.canvas.fg = this.$refs.fgCanvas
           let ctx = this.canvas.bg.getContext('2d');
-          this.mirrorDisplay()
-          this.syncTouchpad()
+
+          this.openDisplayTouchpad()
 
           new ResizeSensor(this.canvas.bg.parentElement, (e) => {
             this.fitCanvas(this.canvas.bg)
@@ -1193,11 +1197,9 @@
           document.addEventListener("visibilitychange", () => {
             let pageHidden = document.hidden;
             if (pageHidden) {
-              this.closeMirrorDisplay()
-              this.closeSyncTouchpad()
+              this.closeDisplayTouchpad()
             } else {
-              this.mirrorDisplay()
-              this.syncTouchpad()
+              this.openDisplayTouchpad()
             }
           })
 
