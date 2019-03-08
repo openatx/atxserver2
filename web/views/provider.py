@@ -91,9 +91,6 @@ class ProviderHeartbeatWSHandler(BaseWebSocketHandler):
             }
         }
         """
-        import pprint
-        # pprint.pprint(req)
-
         updates = req.copy()
         udid = updates['udid']
         assert isinstance(udid, str)

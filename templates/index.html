@@ -38,18 +38,19 @@
                 </template>
             </template>
         </el-table-column>
-        <el-table-column prop="prop_serial" label="Serial">
+        <el-table-column prop="platform" label="类型"></el-table-column>
+        <el-table-column label="设备编号">
             <template slot-scope="scope">
                 <template v-if="scope.row.present && scope.row.using && scope.row.userId == user.email">
                     <a :href='"/devices/"+scope.row.udid+"/remotecontrol"'
-                        target="_blank">{{!scope.row.prop_serial}}</a>
+                        target="_blank">{{!scope.row.prop_serial || scope.row.udid}}</a>
                 </template>
                 <template v-else>
-                    {{!scope.row.prop_serial}}
+                    {{!scope.row.prop_serial || scope.row.udid}}
                 </template>
             </template>
         </el-table-column>
-        <el-table-column prop="prop_brand" label="Brand"></el-table-column>
+        <el-table-column prop="prop_brand" label="品牌"></el-table-column>
         <el-table-column prop="prop_version" label="Version"></el-table-column>
     </el-table>
 </div>

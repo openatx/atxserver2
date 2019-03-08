@@ -338,9 +338,12 @@ class D(object):
             from tornado.httpclient import AsyncHTTPClient, HTTPRequest
             http_client = AsyncHTTPClient()
             secret = source.get('secret', '')
-            url = source['url'] + "/" + device['udid'] + "?secret=" + secret
-            request = HTTPRequest(url, method="DELETE")
-            await http_client.fetch(request)
+            if not source.get('url'):
+                await self.update({"colding": False})
+            else:
+                url = source['url'] + "/" + device['udid'] + "?secret=" + secret
+                request = HTTPRequest(url, method="DELETE")
+                await http_client.fetch(request)
 
         IOLoop.current().add_callback(cold_device)
 

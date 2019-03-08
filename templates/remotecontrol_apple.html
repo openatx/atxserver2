@@ -67,6 +67,35 @@
   .bottom-gutter {
     margin-bottom: 10px;
   }
+
+  .finger {
+    position: absolute;
+    border-style: solid;
+    border-radius: 50%;
+    border-color: white;
+    border-width: 1mm;
+    width: 6mm;
+    height: 6mm;
+    top: -3mm;
+    left: -3mm;
+    opacity: 0.7;
+    pointer-events: none;
+    background: red;
+    z-index: 200;
+    display: none;
+  }
+
+  .finger-1 {
+    background-color: blue;
+  }
+
+  .finger.active {
+    display: block;
+  }
+
+  .finger.longClick {
+    border: 1mm solid rebeccapurple;
+  }
 </style>
 {% end %}
 
@@ -115,11 +144,10 @@
 {% block content %}
 <div class="container-fluid d-flex flex-column">
   <div class="row grow-1">
-    <div class="col-sm debugarea d-flex flex-column justify-content-center nopadding grow-0">
+    <div class="col-sm debugarea d-flex flex-column justify-content-center nopadding grow-0 height100">
       <section class="debugarea" style="height: 2rem; line-height: 2rem; justify-self: start">
-        {{!properties.serial}}
         <span>
-          <i v-if="displayLinked" @click="closeMirrorDisplay" class="fas fa-link" style="color: green"></i>
+          <i v-if="displayLinked" class="fas fa-link" style="color: green"></i>
           <i v-else @click="mirrorDisplay" class="fas fa-unlink" style="color: red"></i>
         </span>
         <span>
@@ -127,8 +155,8 @@
         </span>
 
       </section>
-      <section class="screen debugarea d-flex grow-1 align-items-center justify-content-center" style="line-height: 0px"
-        @dblclick="runKeyevent('WAKEUP')">
+      <section class="screen debugarea d-flex grow-1 align-items-center justify-content-center"
+        style="line-height: 0px">
         <!-- <canvas ref="fgCanvas" class="canvas-fg" v-bind:style="canvasStyle"></canvas> -->
         <canvas ref="bgCanvas" class="canvas-bg" v-bind:style="canvasStyle"></canvas>
         <span class="finger finger-0" style="transform: translate3d(200px, 100px, 0px)"></span>
@@ -141,17 +169,19 @@
         </button>
       </section>
     </div>
-    <div class="col-sm debugarea" style="overflow-y: auto">
+    <div class="col-sm debugarea height100" style="overflow-y: auto">
       <el-tabs v-model="activeName" @tab-click="handleTabClick">
         <el-tab-pane label="常用" name="common">
-          <p>
-            <label>SessionID</label>
-            <code v-text="session.id"></code>
-          </p>
-          <p>
-            <label>Frames</label>
-            <code v-text="session.frameCount"></code>
-          </p>
+          <dl>
+            <dt>Display</dt>
+            <dd><code>{{!display.width}}x{{!display.height}}</code></dd>
+            <dt>SessionID</dt>
+            <dd><code v-text="session.id"></code></dd>
+            <dt>Frames</dt>
+            <dd><code v-text="session.frameCount"></code></dd>
+            <dt>FPS</dt>
+            <dd><code v-text="display.fps"></code></dd>
+          </dl>
         </el-tab-pane>
       </el-tabs>
     </div>
@@ -180,21 +210,85 @@
           canvasStyle: {
             opacity: 1,
             width: '400px',
-            height: '200px',
+            height: 'unset',
             maxHeight: "unset",
           },
           rotation: 0,
-          displayLinked: false,
+          displayLinked: true,
           session: {
             id: '',
             frameCount: 0,
-          }
+          },
+          display: {
+            width: 0,
+            height: 0,
+            fps: 0,
+          },
+          pageHidden: false,
         }, ret.data),
         mounted: function () {
           this.canvas.bg = this.$refs.bgCanvas;
+
+          // save the bandwidth
+          document.addEventListener("visibilitychange", () => {
+            this.pageHidden = document.hidden;
+          })
+
           this.mirrorDisplay()
+          this.syncTouchpad()
+          this.hotfix()
+
+          // show fps
+          this.showFPS()
+
+          // 防止设备被自动释放
+          this.closeWindowWhenReleased(10000)
+
+          // 更新使用时间
+          setInterval(() => {
+            let duration = moment.now() - moment(this.usingBeganAt)
+            this.$refs.usingTime.innerHTML = moment.utc(duration).format("HH:mm:ss")
+          }, 1000)
         },
         methods: {
+          showFPS() {
+            let frame = this.session.frameCount;
+            setInterval(() => {
+              console.log(this.session.frameCount, frame)
+              this.display.fps = this.session.frameCount - frame
+              frame = this.session.frameCount;
+            }, 1000);
+          },
+          closeWindowWhenReleased(interval) {
+            setTimeout(() => {
+              if (document.hidden) {
+                $.getJSON("/api/v1/user/devices/" + udid)
+                  .done(ret => {
+                    this.closeWindowWhenReleased(5000)
+                  })
+                  .fail(ret => {
+                    let content = '设备' + this.idleTimeout + "秒内没有操作，设备自动释放，点击刷新重新占用该设备"
+                    this.$alert(content, '设备超时提示', {
+                      confirmButtonText: '刷新',
+                      type: 'warning'
+                    }).then(() => {
+                      location.reload()
+                    }).catch(() => {
+                      window.close()
+                    })
+                  })
+              } else {
+                $.getJSON("/api/v1/user/devices/" + udid + "/active")
+                  .done((ret) => {
+                    this.closeWindowWhenReleased(interval)
+                  })
+                  .fail(function (ret) {
+                    console.log(ret)
+                    alert("设备可能被释放了，Press F12 to debug")
+                  })
+              }
+            }, interval)
+          },
           pressHome() {
             return $.ajax({
               url: this.path2url("/wda/homescreen"),
@@ -205,37 +299,51 @@
               })
           },
           hotfix() {
-
+            $.ajax({
+              url: this.path2url("/status")
+            }).then(ret => {
+              this.session.id = ret.sessionId
+            }).then(() => {
+              return $.ajax({
+                url: this.path2url("/session/" + this.session.id + "/window/size")
+              })
+            }).then(ret => {
+              this.display.width = ret.value.width;
+              this.display.height = ret.value.height;
+            })
           },
           stopUsing() {
             $.ajax({
               method: "delete",
               url: "/api/v1/user/devices/" + this.udid,
               dataType: "json"
-            }).then(ret => {
+            }).always(() => {
               window.close()
             })
           },
           handleTabClick(tab, event) {
             console.log(tab.name)
           },
-          corsAnywhere(url) {
-            let noSchemeUrl = url.replace(/^http:\/\//, "")
-            return "http://localhost:18000/" + noSchemeUrl
-          },
-          path2url(url) {
-            return this.corsAnywhere("127.0.0.1:8100" + url)
+          path2url(pathname) {
+            return this.source.wdaUrl + pathname
           },
           mirrorDisplay() {
-            let canvas = this.canvas.bg,
-              screenshotUrl = this.path2url("/screenshot")
-            let ctx = canvas.getContext('2d')
+            let
+              canvas = this.canvas.bg,
+              screenshotUrl = this.path2url("/screenshot"),
+              ctx = canvas.getContext('2d'),
+              BLANK_IMG =
+                'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw=='
+
+            if (this.pageHidden) {
+              setTimeout(this.mirrorDisplay, 1000)
+              return
+            }
 
             $.ajax({
               url: screenshotUrl,
               dataType: "json",
             }).then((ret) => {
-              console.log(ret.sessionId)
               this.session.frameCount += 1
               this.session.id = ret.sessionId;
               img = new Image();
@@ -245,89 +353,138 @@
                 canvas.height = img.height
 
                 ctx.drawImage(img, 0, 0, img.width, img.height);
+                img.onload = img.onerror = null
+                img.src = BLANK_IMG
+                img = null
+
                 this.fitCanvas(canvas)
-                // console.log("screen", new Date())
                 this.mirrorDisplay()
+              }
+              img.onerror = () => {
+                console.log("image load error")
               }
 
               img.src = "data:image/png;base64," + ret.value;
             })
           },
           syncTouchpad() {
-            let screen = {
-              bounds: {}
-            }
+            let bounds = {}
+            let element = this.canvas.bg;
 
             function calculateBounds() {
               var el = element;
-              screen.bounds.w = el.offsetWidth
-              screen.bounds.h = el.offsetHeight
-              screen.bounds.x = 0
-              screen.bounds.y = 0
+              bounds.w = el.offsetWidth
+              bounds.h = el.offsetHeight
+              bounds.x = 0
+              bounds.y = 0
 
               while (el.offsetParent) {
-                screen.bounds.x += el.offsetLeft
-                screen.bounds.y += el.offsetTop
+                bounds.x += el.offsetLeft
+                bounds.y += el.offsetTop
                 el = el.offsetParent
               }
             }
 
-            let mouseDownListener = (event) => {
-              var e = event;
+            let coords = (e) => {
+              let x = e.pageX - bounds.x
+              let y = e.pageY - bounds.y
+              x = Math.max(0, Math.min(bounds.w, x))
+              y = Math.max(0, Math.min(bounds.h, y))
+              return {
+                fingerX: x,
+                fingerY: y,
+                x: Math.floor(x / bounds.w * this.display.width),
+                y: Math.floor(y / bounds.h * this.display.height)
+              }
+            }
+
+
+            let mousePos = {
+              beganAt: null,
+              down: null,
+              up: null,
+            }
+
+            let wdaTouch = (x, y) => {
+              return $.ajax({
+                method: "POST",
+                url: this.path2url("/session/" + this.session.id + "/wda/tap/0"),
+                data: JSON.stringify({ x, y })
+              })
+            }
+
+            let wdaSwipe = (fromX, fromY, toX, toY, duration) => {
+              return $.ajax({
+                url: this.path2url("/session/" + this.session.id + "/wda/dragfromtoforduration"),
+                method: "POST",
+                data: JSON.stringify({
+                  fromX: fromX,
+                  fromY: fromY,
+                  toX: toX,
+                  toY: toY,
+                  duration: duration || 0.01, // seconds
+                })
+              })
+            }
+
+            let mouseUpOperate = (x, y) => {
+              let duration = new Date() - mousePos.beganAt; // milliseconds
+              console.log("hold duration", duration);
+
+              const
+                startX = mousePos.down.x,
+                startY = mousePos.down.y,
+                moveX = Math.abs(startX - x),
+                moveY = Math.abs(startY - y);
+
+              if (duration < 200 && moveX == 0 && moveY == 0) { // click
+                console.log("touch", x, y)
+                return wdaTouch(x, y)
+              } else {
+                console.log("swipe:", mousePos.down, "to", { x, y }, duration)
+                return wdaSwipe(startX, startY, x, y, duration / 1000)
+              }
+            }
+
+
+            const mouseDownListener = (event) => {
+              let e = event;
               if (e.originalEvent) {
                 e = e.originalEvent
               }
               e.preventDefault()
 
-              // activate whatsinput
-              this.$refs.whatsinput.focus()
-
               // Middle click equals HOME
               if (e.which === 2) {
-                this.runKeyevent("HOME")
+                this.pressHome()
                 return
               }
-              // Right click equals BACK
-              if (e.which === 3) {
-                this.runKeyevent("BACK")
-                return
-              }
-
 
               fakePinch = e.altKey
               calculateBounds()
 
-              var x = e.pageX - screen.bounds.x
-              var y = e.pageY - screen.bounds.y
-              var pressure = 0.5
-              // activeFinger(0, e.pageX, e.pageY, pressure);
+              let { fingerX, fingerY, x, y } = coords(e)
 
-              touchDown(0, x, y, pressure);
-              touchCommit();
+              activeFinger(0, fingerX, fingerY);
+              mousePos.beganAt = new Date()
+              mousePos.down = { x, y }
 
-              // element.removeEventListener('mousemove', mouseHoverListener);
-              element.addEventListener('mousemove', mouseMoveListener);
+              console.log("mouse down:", coords(e))
+
+              document.addEventListener('mousemove', mouseMoveListener);
               document.addEventListener('mouseup', mouseUpListener);
             }
 
-            let mouseMoveListener = (event) => {
+            function mouseMoveListener(event) {
               var e = event
               if (e.originalEvent) {
                 e = e.originalEvent
               }
-              // Skip secondary click
-              if (e.which === 3) {
-                return
-              }
               e.preventDefault()
 
+              let { fingerX, fingerY } = coords(e)
               var pressure = 0.5
-              activeFinger(0, e.pageX, e.pageY, pressure);
-              var x = e.pageX - screen.bounds.x
-              var y = e.pageY - screen.bounds.y
-
-              touchMove(0, x, y, pressure);
-              touchCommit();
+              activeFinger(1, fingerX, fingerY, pressure);
             }
 
             function mouseUpListener(event) {
@@ -335,26 +492,30 @@
               if (e.originalEvent) {
                 e = e.originalEvent
               }
-              // Skip secondary click
-              if (e.which === 3) {
-                return
-              }
               e.preventDefault()
 
-              touchUp(0)
-              touchCommit()
+              element.style.cursor = 'not-allowed' // not working
+              element.style.pointerEvents = "none"
+
+              let { fingerX, fingerY, x, y } = coords(e)
+
+              activeFinger(1, fingerX, fingerY);
+
               stopMousing()
+              element.removeEventListener("mousedown", mouseDownListener)
+
+              mouseUpOperate(x, y).then(() => {
+                recoverFingersAndMouse()
+              })
             }
 
             function stopMousing() {
-              element.removeEventListener('mousemove', mouseMoveListener);
-              // element.addEventListener('mousemove', mouseHoverListener);
+              document.removeEventListener('mousemove', mouseMoveListener);
               document.removeEventListener('mouseup', mouseUpListener);
-              deactiveFinger(0);
             }
 
             function activeFinger(index, x, y, pressure) {
-              var scale = 0.5 + pressure
+              var scale = 0.5 + (pressure || 0.5)
               $(".finger-" + index)
                 .addClass("active")
                 .css("transform", 'translate3d(' + x + 'px,' + y + 'px,0)')
@@ -364,9 +525,20 @@
               $(".finger-" + index).removeClass("active")
             }
 
+            function recoverFingersAndMouse() {
+              deactiveFinger(0)
+              deactiveFinger(1)
+              element.style.cursor = ""
+              element.style.pointerEvents = ""
+              element.addEventListener('mousedown', mouseDownListener);
+            }
+
             function preventHandler(event) {
               event.preventDefault()
             }
+
+            /* bind listeners */
+            element.addEventListener('mousedown', mouseDownListener);
           },
           fitCanvas(canvas) {
             if (canvas.width > canvas.height) {
