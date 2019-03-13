@@ -29,6 +29,10 @@
     height: 100%;
   }
 
+  .height-fill {
+    height: -webkit-fill-available;
+  }
+
   .grow-0 {
     flex-grow: 0;
   }
@@ -129,7 +133,7 @@
 {% block content %}
 <div class="container-fluid d-flex flex-column">
   <div class="row grow-1">
-    <div class="col-sm debugarea d-flex flex-column justify-content-center nopadding grow-0 height100">
+    <div class="col-sm debugarea d-flex flex-column justify-content-center nopadding grow-0 height-fill">
       <section class="debugarea" style="height: 32px; line-height: 32px; justify-self: start">
         {{!properties.serial}}
         <span>
@@ -173,7 +177,7 @@
         </button>
       </section>
     </div>
-    <div class="col-sm debugarea height100" style="min-height: 0; overflow-y: auto">
+    <div class="col-sm debugarea height-fill" style="min-height: 0; overflow-y: auto">
       <el-tabs v-model="activeName" @tab-click="handleTabClick">
         <el-tab-pane label="常用" name="common">
           <div ref="commonContainer" class="row">
