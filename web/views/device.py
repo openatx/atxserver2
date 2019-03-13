@@ -341,7 +341,8 @@ class D(object):
             if not source.get('url'):
                 await self.update({"colding": False})
             else:
-                url = source['url'] + "/" + device['udid'] + "?secret=" + secret
+                url = source['url'] + "/devices/" + device[
+                    'udid'] + "/cold?secret=" + secret
                 request = HTTPRequest(url, method="DELETE")
                 await http_client.fetch(request)
 

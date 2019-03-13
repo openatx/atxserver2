@@ -145,7 +145,10 @@
 <div class="container-fluid d-flex flex-column">
   <div class="row grow-1">
     <div class="col-sm debugarea d-flex flex-column justify-content-center nopadding grow-0 height100">
-      <section class="debugarea" style="height: 2rem; line-height: 2rem; justify-self: start">
+      <section class="debugarea" style="height: 2rem; line-height: 2rem; padding: 0 10px; justify-self: start">
+        <span>
+          <i class="fas fa-mobile-alt cursor-pointer" :class='{"fa-rotate-90": landscape}'></i>
+        </span>
         <span>
           <i v-if="displayLinked" class="fas fa-link" style="color: green"></i>
           <i v-else @click="mirrorDisplay" class="fas fa-unlink" style="color: red"></i>
@@ -153,7 +156,6 @@
         <span>
           <i @click="hotfix" title="hotfix" class="fas fa-hammer"></i>
         </span>
-
       </section>
       <section class="screen debugarea d-flex grow-1 align-items-center justify-content-center"
         style="line-height: 0px">
@@ -190,13 +192,14 @@
 {% end %}
 
 {% block script %}
+<script src="https://cdn.jsdelivr.net/npm/css-element-queries@1.1.1/src/ResizeSensor.min.js"></script>
+<script src="{{static_url('javascripts/imagepool.js')}}"></script>
 <script>
   const udid = "{{udid}}"
   const userEmail = "{{current_user.email}}"
 
   $.getJSON("/api/v1/user/devices/" + udid)
     .then(ret => {
-
       // closeWindowWhenReleased()
 
       vm = new Vue({
@@ -214,7 +217,6 @@
             maxHeight: "unset",
           },
           rotation: 0,
-          displayLinked: true,
           session: {
             id: '',
             frameCount: 0,
@@ -223,32 +225,18 @@
             width: 0,
             height: 0,
             fps: 0,
+            ws: null,
           },
           pageHidden: false,
+          imagePool: new ImagePool(100),
         }, ret.data),
-        mounted: function () {
-          this.canvas.bg = this.$refs.bgCanvas;
-
-          // save the bandwidth
-          document.addEventListener("visibilitychange", () => {
-            this.pageHidden = document.hidden;
-          })
-
-          this.mirrorDisplay()
-          this.syncTouchpad()
-          this.hotfix()
-
-          // show fps
-          this.showFPS()
-
-          // 防止设备被自动释放
-          this.closeWindowWhenReleased(10000)
-
-          // 更新使用时间
-          setInterval(() => {
-            let duration = moment.now() - moment(this.usingBeganAt)
-            this.$refs.usingTime.innerHTML = moment.utc(duration).format("HH:mm:ss")
-          }, 1000)
+        computed: {
+          landscape() {
+            return this.display.width > this.display.height;
+          },
+          displayLinked() {
+            return this.display.ws !== null
+          }
         },
         methods: {
           showFPS() {
@@ -327,45 +315,51 @@
           path2url(pathname) {
             return this.source.wdaUrl + pathname
           },
+          disableTouch() {
+            let element = this.canvas.bg;
+            element.style.cursor = 'not-allowed' // not working
+            element.style.pointerEvents = "none"
+          },
+          enableTouch() {
+            let element = this.canvas.bg;
+            element.style.cursor = ''
+            element.style.pointerEvents = ""
+          },
           mirrorDisplay() {
-            let
-              canvas = this.canvas.bg,
-              screenshotUrl = this.path2url("/screenshot"),
-              ctx = canvas.getContext('2d'),
-              BLANK_IMG =
-                'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw=='
+            let ws = new WebSocket("ws://10.240.171.86:5600/screen")
+            this.display.ws = ws;
 
-            if (this.pageHidden) {
-              setTimeout(this.mirrorDisplay, 1000)
-              return
+            ws.onopen = () => {
+              console.log("screen connected")
+              this.canvasStyle.opacity = 1
+              this.enableTouch()
             }
-
-            $.ajax({
-              url: screenshotUrl,
-              dataType: "json",
-            }).then((ret) => {
-              this.session.frameCount += 1
-              this.session.id = ret.sessionId;
-              img = new Image();
-
-              img.onload = () => {
-                canvas.width = img.width
-                canvas.height = img.height
-
-                ctx.drawImage(img, 0, 0, img.width, img.height);
-                img.onload = img.onerror = null
-                img.src = BLANK_IMG
-                img = null
-
-                this.fitCanvas(canvas)
-                this.mirrorDisplay()
+            ws.onmessage = (message) => {
+              if (message.data instanceof Blob) {
+                this.session.frameCount += 1
+                this.drawBlobImageToCanvas(message.data, this.canvas.bg, this.landscape)
               }
-              img.onerror = () => {
-                console.log("image load error")
+            }
+            ws.onclose = () => {
+              if (this.display.ws === ws) {
+                this.display.ws = null;
+                this.$message({
+                  showClose: true,
+                  message: "设备屏幕同步中断",
+                  type: "error",
+                })
+                this.canvasStyle.opacity = 0.5
+                this.disableTouch()
               }
-
-              img.src = "data:image/png;base64," + ret.value;
-            })
+            }
+          },
+          closeMirrorDisplay() {
+            this.canvasStyle.opacity = 0.5
+            if (this.display.ws) {
+              let ws = this.display.ws;
+              this.display.ws = null;
+              ws.close()
+            }
           },
           syncTouchpad() {
             let bounds = {}
@@ -390,9 +384,10 @@
               let y = e.pageY - bounds.y
               x = Math.max(0, Math.min(bounds.w, x))
               y = Math.max(0, Math.min(bounds.h, y))
+
               return {
-                fingerX: x,
-                fingerY: y,
+                fingerX: x + element.offsetLeft,
+                fingerY: y + element.offsetTop,
                 x: Math.floor(x / bounds.w * this.display.width),
                 y: Math.floor(y / bounds.h * this.display.height)
               }
@@ -437,15 +432,21 @@
                 moveX = Math.abs(startX - x),
                 moveY = Math.abs(startY - y);
 
-              if (duration < 200 && moveX == 0 && moveY == 0) { // click
-                console.log("touch", x, y)
-                return wdaTouch(x, y)
+              if (moveX == 0 && moveY == 0) {
+                if (duration < 200) { // click
+                  // click
+                  console.log("touch", x, y)
+                  return wdaTouch(x, y)
+                } else {
+                  // long click
+                  console.log("touchHold", x, y)
+                  return wdaSwipe(startX, startY, x, y, duration / 1000)
+                }
               } else {
                 console.log("swipe:", mousePos.down, "to", { x, y }, duration)
-                return wdaSwipe(startX, startY, x, y, duration / 1000)
+                return wdaSwipe(startX, startY, x, y, 0.01)
               }
             }
-
 
             const mouseDownListener = (event) => {
               let e = event;
@@ -468,8 +469,6 @@
               activeFinger(0, fingerX, fingerY);
               mousePos.beganAt = new Date()
               mousePos.down = { x, y }
-
-              console.log("mouse down:", coords(e))
 
               document.addEventListener('mousemove', mouseMoveListener);
               document.addEventListener('mouseup', mouseUpListener);
@@ -552,7 +551,7 @@
               this.canvasStyle.width = "auto"
             }
           },
-          drawBlobImageToCanvas(blob, canvas) {
+          drawBlobImageToCanvas(blob, canvas, landscape) {
             // Support jQuery Promise
             var dtd = $.Deferred();
             var ctx = canvas.getContext('2d'),
@@ -566,6 +565,20 @@
               canvas.height = img.height
 
               ctx.drawImage(img, 0, 0, img.width, img.height);
+
+              if (landscape) {
+                // 顺时针旋转 270°
+                canvas.width = img.height
+                canvas.height = img.width
+
+                ctx.save()
+                ctx.translate(canvas.width / 2, canvas.height / 2);
+                ctx.rotate(1.5 * Math.PI);
+                ctx.drawImage(img,
+                  -img.width / 2,
+                  -img.height / 2);
+                ctx.restore();
+              }
               this.fitCanvas(canvas)
 
               // Try to forcefully clean everything to get rid of memory
@@ -603,7 +616,36 @@
             img.src = url;
             return dtd;
           },
-        }
+        },
+        mounted: function () {
+          this.canvas.bg = this.$refs.bgCanvas;
+
+          // save the bandwidth
+          document.addEventListener("visibilitychange", () => {
+            this.pageHidden = document.hidden;
+            if (this.pageHidden) {
+              this.closeMirrorDisplay()
+            } else {
+              this.mirrorDisplay()
+            }
+          })
+
+          this.mirrorDisplay()
+          this.syncTouchpad()
+          this.hotfix()
+
+          // show fps
+          this.showFPS()
+
+          // 防止设备被自动释放
+          this.closeWindowWhenReleased(10000)
+
+          // 更新使用时间
+          setInterval(() => {
+            let duration = moment.now() - moment(this.usingBeganAt)
+            this.$refs.usingTime.innerHTML = moment.utc(duration).format("HH:mm:ss")
+          }, 1000)
+        },
       })
     })
 </script>

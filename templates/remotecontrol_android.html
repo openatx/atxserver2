@@ -284,11 +284,11 @@
                       浏览器打开URL
                     </div>
                     <div class="card-body">
-                      <textarea class="form-control" placeholder="在这里输入URL" rows=2 v-model="browserURL"
-                        @keyup.enter="openBrowser(browserURL)"></textarea>
+                      <textarea class="form-control" placeholder="在这里输入URL" rows=2 v-model="browserUrl"
+                        @keyup.enter="openBrowser(browserUrl)"></textarea>
                       <div style="padding-top: 5px">
                         <button type="button" class="btn btn-primary btn-sm float-right"
-                          @click='openBrowser(browserURL)'>打开</button>
+                          @click='openBrowser(browserUrl)'>打开</button>
                       </div>
                     </div>
                   </div>
@@ -353,7 +353,17 @@
             </ul>
           </div>
         </el-tab-pane>
-        <el-tab-pane label="安装管理" name="second">配置管理</el-tab-pane>
+        <el-tab-pane label="安装管理" name="second">
+          <div class="form-group">
+            <label>URL</label>
+            <input type="text" class="form-control form-control-sm" placeholder="http://..." v-model="app.installUrl">
+          </div>
+          <button class="btn btn-outline-primary btn-sm" @click="appInstall"
+            :disabled="!app.finished || !app.installUrl">安裝</button>
+          <p>
+            <pre v-show="!!app.message" v-text="app.message"></pre>
+          </p>
+        </el-tab-pane>
         <el-tab-pane label="截图" name="screenshot">
           <a :href="screenshotUrl">Screenshot</a>
         </el-tab-pane>
@@ -409,7 +419,12 @@
             pid: '',
           },
           imagePool: new ImagePool(100),
-          browserURL: "",
+          browserUrl: "",
+          app: {
+            installUrl: "",
+            finished: true,
+            message: "",
+          },
           tabColumnStyle: 'col-6',
           userSettings: Object.assign({
             inputName: '',
@@ -422,6 +437,27 @@
           }, {}),
         }, ret.data),
         methods: {
+          appInstall() {
+            this.app.finished = false
+            this.app.message = "安裝中 ..."
+            $.ajax({
+              method: "post",
+              url: this.source.url + "/devices/" + this.udid + "/app/install",
+              data: {
+                url: this.app.installUrl,
+                secret: this.source.secret,
+              }
+            }).then(ret => {
+              console.log(ret)
+              if (ret.success) {
+                this.app.message = ret.output;
+              } else {
+                this.app.message = ret.description;
+              }
+            }).always(() => {
+              this.app.finished = true
+            })
+          },
           addTopAppToShortcut() {
             this.$prompt('给 <code>' + this.topApp.packageName + '</code> 起个名字', '快捷方式添加', {
               confirmButtonText: '确定',
@@ -586,7 +622,7 @@
             if (!/^https?:\/\//.test(url)) {
               url = "http://" + url;
             }
-            this.browserURL = ""
+            this.browserUrl = ""
             return this.runShell("am start -a android.intent.action.VIEW -d " + url);
           },
           runShell(command) {
@@ -719,6 +755,7 @@
             this.canvasStyle.opacity = 0.5;
             if (this.websockets.screen) {
               let ws = this.websockets.screen;
+              this.websockets.screen = null;
               ws.close()
             }
           },
