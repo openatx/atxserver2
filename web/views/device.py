@@ -30,7 +30,7 @@ class APIDeviceListHandler(CorsMixin, BaseRequestHandler):
             r.desc("createdAt"))
         if self.get_argument("platform", ""):
             reql = reql.filter({"platform": self.get_argument("platform")})
-        if self.get_argument("usable"): # 只查找能用的设备
+        if self.get_argument("usable", None): # 只查找能用的设备
             reql = reql.filter({"using": False, "colding": False, "present": True})
         devices = await reql.all()
 

@@ -236,6 +236,10 @@
           },
           displayLinked() {
             return this.display.ws !== null
+          },
+          displayWSUrl(){
+            let url = this.source.wdaUrl.replace(/^https?:\/\//, "ws://") + "/screen"
+            return url
           }
         },
         methods: {
@@ -326,7 +330,7 @@
             element.style.pointerEvents = ""
           },
           mirrorDisplay() {
-            let ws = new WebSocket("ws://10.240.171.86:5600/screen")
+            let ws = new WebSocket(this.displayWSUrl)
             this.display.ws = ws;
 
             ws.onopen = () => {
