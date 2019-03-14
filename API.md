@@ -44,6 +44,7 @@ $ http GET $SERVER_URL/api/v1/user
 
 ```bash
 $ HTTP GET $SERVER_URL/api/v1/devices
+# 支持的过滤参数 ?platform=apple&usable=true
 
 {
     "success": true,
@@ -51,7 +52,7 @@ $ HTTP GET $SERVER_URL/api/v1/devices
         "platform": "android",
         "present": true,
         "using": true,
-        "codling": false,
+        "colding": false,
         "userId": "fa@example.com",
         "properties": {
             "brand": "SMARTISAN",
@@ -72,6 +73,8 @@ $ HTTP GET $SERVER_URL/api/v1/devices
 - `userId`代表使用者的ID，这里的ID其实就是Email
 - `properties`代表设备的一些状态信息，基本都是静态信息
 
+usable等价于`{present: true, using: false, colding: false}`
+
 ### 占用设备
 
 **POST** /api/v1/user/devices
@@ -84,6 +87,78 @@ $ http POST $SERVER_URL/api/v1/user/devices <<< '{"udid": "xx...xxxx"}'
     "description": "Device successfully added"
 }
 ```
+
+通过payload传递数据，JSON格式
+
+- udid是必须字段(Android设备的udid是设备的product，mac地址，serial组合生成的)
+- idleTimeout: 设备最长空闲时间 seconds(可选), 当前时间 - 活动时间 > idleTimeout 自动释放设备
+
+```json
+{
+    "udid": "xlj1311l2fkjkzdf",
+    "idleTimeout": 600
+}
+```
+
+**更新活动时间接口**
+
+**GET** /api/v1/user/devices/{$UDID}/active
+
+```bash
+$ http GET /api/v1/user/devices/${UDID}/active
+{
+    "success": true,
+    "description": "Device activated time updated"
+}
+```
+
+### 获取设备信息
+
+**GET** /api/v1/user/devices/${UDID}
+
+```bash
+$ http GET $SERVER_URL/api/v1/user/devices/${UDID}
+
+{
+    "success": true,
+    "device": {
+        "platform": "android",
+        "present": true,
+        "using": true,
+        "colding": false,
+        "userId": "fa@example.com",
+        "properties": {
+            "brand": "SMARTISAN",
+            "version": "7.1.1"
+        },
+        "source": {
+            "atxAgentAddress": "10.0.0.1:20001",
+            "remoteConnectAddress": "10.0.0.1:20002",
+            "whatsInputAddress": "10.0.0.1:20003",
+            "secret": "6NC5Tls1",
+            "url": "http://10.0.1.1:3500",
+        }
+    }
+}
+```
+
+比 `/api/v1/devices` 获取到的设备，多出一个source字段，下面详细说明下
+
+Android和iOS source都包含的部分
+
+- url: provider的URL，通过可以让设备cold和安装应用
+
+Android的source独有内容
+
+- atxAgentAddress: 主要用于[uiautomator2](https://github.com/openatx/uiautomator2)测试框架
+- remoteConnectAddress: 用于`adb connect`连接使用
+- whatsInputAddress: 这个可以不用关注，他主要提供远程真机的实时输入法
+
+iOS的source独有内容
+
+- wdaUrl: webdriveragent用到的http接口，eg `http://10.0.0.1:9300`
+
+WebSocket访问`${wdaUrl}/screen`可以获取到当前的图片流
 
 ### 释放设备
 

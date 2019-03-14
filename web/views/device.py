@@ -26,8 +26,14 @@ class ReleaseError(Exception):
 
 class APIDeviceListHandler(CorsMixin, BaseRequestHandler):
     async def get(self):
-        devices = await db.table_devices.without("sources", "source").order_by(
-            r.desc("createdAt")).all()
+        reql = db.table_devices.without("sources", "source").order_by(
+            r.desc("createdAt"))
+        if self.get_argument("platform", ""):
+            reql = reql.filter({"platform": self.get_argument("platform")})
+        if self.get_argument("usable"): # 只查找能用的设备
+            reql = reql.filter({"using": False, "colding": False, "present": True})
+        devices = await reql.all()
+
         self.write_json({
             "success": True,
             "data": {
@@ -56,7 +62,7 @@ class APIUserDeviceActiveHandler(AuthRequestHandler):
         if ret['replaced']:
             self.write_json({
                 "success": True,
-                "description": "Device activated time is updated"
+                "description": "Device activated time updated"
             })
         else:
             self.set_status(400)
@@ -121,8 +127,9 @@ class APIUserDeviceHandler(AuthRequestHandler):
         """ acquire device """
         data = self.get_payload()
         udid = data["udid"]
+        idle_timeout = data.get('idleTimeout', 600) # 默认10分钟
         try:
-            await D(udid).acquire(self.current_user.email)
+            await D(udid).acquire(self.current_user.email, idle_timeout)
             self.write_json({
                 "success": True,
                 "description": "Device successfully added"
