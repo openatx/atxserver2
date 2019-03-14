@@ -17,10 +17,15 @@
 </style>
 {% end %}
 
+{% block navlinks %}
+<a href="/user" class="nav-item nav-link active">
+    <i class="fas fa-user"></i> 用户信息
+</a>
+{% end %}
+
 {% block content %}
 <div class="container">
-    <h3>用户信息</h3>
-    <div>
+    <div style="margin-top: 10px">
         <div>
             <dl>
                 <dt>Email</dt>
@@ -31,7 +36,7 @@
         </div>
         <div class="form-group">
             <label>Token</label>
-            <input class="form-control" :value="token">
+            <input class="form-control form-control-sm" :value="token">
         </div>
         <h4>接口使用方法 <small>HTTPie</small></h4>
         <p>

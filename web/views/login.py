@@ -22,7 +22,7 @@ class OpenIdLoginHandler(BaseRequestHandler, OpenIdMixin):
                     format(e))
             else:
                 logger.info("User info: %s", user)
-                await self.set_current_user(user['email'], user['username'])
+                await self.set_current_user(user['email'], user['name'])
                 next_url = self.get_argument('next', '/')
                 self.redirect(next_url)
         else:
