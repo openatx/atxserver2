@@ -62,7 +62,7 @@
     const currentUserName = "{{ current_user.username }}"
 </script>
 <script>
-    $.getJSON("/api/v1/devices")
+    $.getJSON("/api/v1/devices?present=true")
         .then((ret) => {
             new Vue({
                 el: "#app",

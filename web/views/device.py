@@ -30,9 +30,20 @@ class APIDeviceListHandler(CorsMixin, BaseRequestHandler):
             r.desc("createdAt"))
         if self.get_argument("platform", ""):
             reql = reql.filter({"platform": self.get_argument("platform")})
-        if self.get_argument("usable", None): # 只查找能用的设备
-            reql = reql.filter({"using": False, "colding": False, "present": True})
+        if self.get_argument("usable", None):  # 只查找能用的设备
+            reql = reql.filter({
+                "using": False,
+                "colding": False,
+                "present": True
+            })
+        if self.get_argument("present", None):
+            reql = reql.filter(
+                {"present": self.get_argument("present") == "true"})
         devices = await reql.all()
+
+        if self.get_argument("present", ""):
+            present = self.get_argument("present") == "true"
+            devices = [d for d in devices if d['present'] == present]
 
         self.write_json({
             "success": True,
@@ -127,7 +138,7 @@ class APIUserDeviceHandler(AuthRequestHandler):
         """ acquire device """
         data = self.get_payload()
         udid = data["udid"]
-        idle_timeout = data.get('idleTimeout', 600) # 默认10分钟
+        idle_timeout = data.get('idleTimeout', 600)  # 默认10分钟
         try:
             await D(udid).acquire(self.current_user.email, idle_timeout)
             self.write_json({
@@ -350,7 +361,7 @@ class D(object):
             else:
                 url = source['url'] + "/devices/" + device[
                     'udid'] + "/cold?secret=" + secret
-                request = HTTPRequest(url, method="DELETE")
+                request = HTTPRequest(url, method="POST", body='')
                 await http_client.fetch(request)
 
         IOLoop.current().add_callback(cold_device)
