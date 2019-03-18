@@ -41,6 +41,24 @@ class UploadListHandler(AuthRequestHandler):  # replace UploadListHandler
     def get(self):
         self.render("upload.html")
 
+    def parse_filepart(self, filepart) -> dict:
+        _, ext = os.path.splitext(filepart.get_filename())
+        if ext == ".apk":
+            apk = parse_apkfile(filepart.f_out)
+            # icon_url = None
+            # if icon_path:
+            #     apk.save_icon(os.path.join(target_dir, "icon.png"))
+            #     icon_url = self.request.protocol + '://' + self.request.host + "/" + target_dir.replace(
+            #         "\\", "/") + "/icon.png"
+            return {
+                "packageName": apk.package_name,
+                "mainActivity": apk.main_activity,
+                "versionCode": apk.version_code,
+                "versionName": apk.version_name,
+                "iconPath": apk.icon_path,
+            }
+        return {}
+
     async def post(self):
         try:
             self.ps.data_complete()  # close the incoming stream.
@@ -54,56 +72,33 @@ class UploadListHandler(AuthRequestHandler):  # replace UploadListHandler
 
             filepart = parts[0]
             filepart.f_out.seek(0)
-            try:
-                apk = parse_apkfile(filepart.f_out)
-                pkg_name = apk.package_name
-                main_activity = apk.main_activity
-                version_code = apk.version_code
-                version_name = apk.version_name
-                icon_path = apk.icon_path
-            except Exception as e:
-                traceback.print_exc()
-                self.write({
-                    "success": False,
-                    "description": str(e),
-                })
-                return
 
+            # parse apk or ipa
+            fileinfo = self.parse_filepart(filepart)
+
+            # save file
             target_dir = os.path.join('uploads', filepart.md5sum[:2],
                                       filepart.md5sum[2:])
             os.makedirs(target_dir, exist_ok=True)
-
-            _, filext = os.path.splitext(filepart.get_filename())
-            target_path = os.path.join(target_dir, pkg_name + filext)
-
-            apk_url = self.request.protocol + '://' + self.request.host + "/" + target_path.replace(
-                "\\", "/")
-            icon_url = None
-            if icon_path:
-                apk.save_icon(os.path.join(target_dir, "icon.png"))
-                icon_url = self.request.protocol + '://' + self.request.host + "/" + target_dir.replace(
-                    "\\", "/") + "/icon.png"
-
+            _, ext = os.path.splitext(filepart.get_filename())
+            target_path = os.path.join(target_dir, "file" + ext)
             if not os.path.isfile(target_path):
                 filepart.move(target_path)
-            else:
-                pass
+
+            # gen file info
+            url = ''.join([
+                self.request.protocol, '://', self.request.host, "/",
+                target_path.replace("\\", "/")
+            ])
+            data = dict(url=url, md5sum=filepart.md5sum)
+            data.update(fileinfo)
             self.write({
                 "success": True,
-                "data": {
-                    "url": apk_url,
-                    "packageName": pkg_name,
-                    "iconUrl": icon_url,
-                    "iconPath": icon_path,
-                    "md5sum": filepart.md5sum,
-                    "mainActivity": main_activity,
-                    "versionCode": version_code,
-                    "versionName": version_name,
-                }
+                "data": data,
             })
         except Exception as e:
-            self.set_status(400)  # bad request
+            traceback.print_exc()
+            # self.set_status(400)  # bad request
             self.write({"success": False, "description": str(e)})
         finally:
             self.ps.release_parts()
-            self.finish()

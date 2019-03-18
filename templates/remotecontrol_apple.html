@@ -190,6 +190,12 @@
             <dt>FPS</dt>
             <dd><code v-text="display.fps"></code></dd>
           </dl>
+          <hr>
+          <el-upload ref="upload" drag action="/uploads" :on-success="onUpload">
+            <i class="el-icon-upload"></i>
+            <div class="el-upload__text">将安装包拖到此处安装，或<em>点击上传</em></div>
+            <div class="el-upload__tip" slot="tip">只能上传ipa文件，且不超过2G</div>
+          </el-upload>
         </el-tab-pane>
       </el-tabs>
     </div>
@@ -249,10 +255,27 @@
           }
         },
         methods: {
+          onUpload(resp, file, files) {
+            if (!resp.success) {
+              this.$message({
+                message: resp.description,
+                type: "error",
+              })
+              return
+            }
+            // if (!resp.data.iconUrl) {
+            // resp.data.iconUrl = "/static/images/android-logo-robot.png"
+            // }
+            // this.files.push(resp.data)
+            console.log(resp)
+            console.log(file)
+            console.log(files)
+            this.$refs.upload.clearFiles()
+          },
           showFPS() {
             let frame = this.session.frameCount;
             setInterval(() => {
-              console.log(this.session.frameCount, frame)
+              // console.log(this.session.frameCount, frame)
               this.display.fps = this.session.frameCount - frame
               frame = this.session.frameCount;
             }, 1000);

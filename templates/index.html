@@ -14,6 +14,10 @@
     .color-wrong {
         color: red;
     }
+
+    .color-yellow {
+        color: burlywood;
+    }
 </style>
 {% end %}
 
@@ -23,31 +27,61 @@
         <el-alert v-if="websocketDisconnected" title="WebSocket连接断开，点击或F5刷新重连" type="error">
         </el-alert>
     </span>
+    <div class="row">
+        <div class="col-12" style="margin-top: 10px">
+            <div class="card  border-light">
+                <div class="card-body">
+                    <div>
+                        <!-- <el-checkbox size="mini" v-model="filters.private"><i class="fas fa-lock"></i> 私有设备
+                        </el-checkbox> -->
+                    </div>
+                    <div>
+                        <el-checkbox size="mini" v-model="filters.platform.android">
+                            <i class="fab fa-android"></i> 安卓 <small>{{!counts.android}}</small>
+                        </el-checkbox>
+                        <el-checkbox size="mini" v-model="filters.platform.apple">
+                            <i class="fab fa-apple"></i> 苹果 <small>{{!counts.apple}}</el-checkbox>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
     <el-table :data="tableData">
         <!-- <el-table-column prop="udid" label="UDID"></el-table-column> -->
-        <el-table-column label="Status">
+        <el-table-column label="操作">
             <template slot-scope="scope">
-                <template v-if="!scope.row.present">
-                    <span style="color: gray">Offline</span>
+                <template v-if='"offline" == scope.row.status'>
+                    <el-button size="mini" disabled>设备离线</el-button>
+                </template>
+                <template v-else-if='"colding" == scope.row.status'>
+                    <el-button disabled size="mini" type="primary">冷却中</span>
+                </template>
+                <template v-else-if='"stop using" == scope.row.status'>
+                    <el-button @click="deviceRelease(scope.row.udid)" size="mini" type="danger">停用</el-button>
                 </template>
                 <template v-else>
-                    <a :href='"/devices/"+scope.row.udid+"/remotecontrol"' target="_blank"
-                        @click="clickStatus($event, scope.row)">
-                        <!-- {{!deviceStatusName(scope.row)}} -->
-                        {{!scope.row.text}}
+                    <a :href='"/devices/"+scope.row.udid+"/remotecontrol"' target="_blank">
+                        <el-button size="mini">
+                            <i class="fas fa-lock color-yellow"></i>
+                            <!-- <i class="fas fa-unlock"></i> -->
+                            <span style="color: blue">点击使用</span>
+                        </el-button>
                     </a>
                 </template>
             </template>
         </el-table-column>
-        <el-table-column prop="platform" label="类型"></el-table-column>
+        <!-- <el-table-column prop="platform" label="类型"></el-table-column> -->
         <el-table-column label="设备编号">
             <template slot-scope="scope">
-                <template v-if="scope.row.present && scope.row.using && scope.row.userId == user.email">
-                    <a :href='"/devices/"+scope.row.udid+"/remotecontrol"'
-                        target="_blank">{{!scope.row.prop_serial || scope.row.udid}}</a>
+                <template v-if="scope.row.status == 'stop using'">
+                    <a style="font-family: 'Courier New'" :title="scope.row.prop_serial || scope.row.udid"
+                        :href='"/devices/"+scope.row.udid+"/remotecontrol"'
+                        target="_blank">{{!(scope.row.prop_serial || scope.row.udid) | shortString}}</a>
                 </template>
                 <template v-else>
-                    {{!scope.row.prop_serial || scope.row.udid}}
+                    <span style="font-family: 'Courier New'" :title="scope.row.prop_serial || scope.row.udid">
+                        {{!(scope.row.prop_serial || scope.row.udid) | shortString}}
+                    </span>
                 </template>
             </template>
         </el-table-column>
@@ -74,13 +108,24 @@
                         email: currentUserEmail,
                     },
                     devices: [],
+                    counts: {
+                        android: 0,
+                        apple: 0,
+                    },
+                    filters: {
+                        private: false,
+                        platform: {
+                            apple: false,
+                            android: false,
+                        }
+                    }
                 }, ret.data),
                 mounted() {
                     console.log("Mounted:", this.devices)
                 },
                 computed: {
                     tableData() {
-                        return this.filteredDevices.map(v => {
+                        let devices = this.orderedDevices.map(v => {
                             for (const key in v.properties) {
                                 if (v.properties.hasOwnProperty(key)) {
                                     v['prop_' + key] = v.properties[key]
@@ -90,15 +135,33 @@
                             v['display_size'] = display.width + "x" + display.height;
                             return v;
                         })
+                        const fp = this.filters.platform
+                        if (Object.values(fp).some(b => b)) {
+                            devices = devices.filter(v => fp[v.platform])
+                        }
+                        return devices;
                     },
-                    filteredDevices() {
+                    orderedDevices() {
                         let sortBy = (key) => {
                             return (a, b) => a[key] > b[key] ? 1 : (b[key] > a[key] ? -1 : 0)
                         }
 
-                        return this.devices.map(d => {
+                        let devices = this.devices.map(d => {
                             return Object.assign(d, this.deviceConvert(d))
                         }).sort(sortBy("order")).reverse()
+
+                        this.counts.android = 0
+                        this.counts.apple = 0
+                        devices.forEach(d => {
+                            if (d.present) {
+                                if (d.platform == "android") {
+                                    this.counts.android++
+                                } else if (d.platform == "apple") {
+                                    this.counts.apple++
+                                }
+                            }
+                        })
+                        return devices;
 
                         return [{
                             udid: "kjnl-dfljsasdklifjdklsfjlasdflsdfk",
@@ -178,9 +241,9 @@
                         if (!device.present) {
                             return { status: "offline", order: 0, text: "设备离线" }
                         } else if (device.colding) {
-                            return { status: "colding", order: 1, text: "设备清理中" }
+                            return { status: "colding", order: 1, text: "清理中" }
                         } else if (!device.using) {
-                            return { status: "use", order: 2, text: "点击开始使用" }
+                            return { status: "use", order: 2, text: "开始使用" }
                         } else if (device.userId == currentUserEmail) {
                             return { status: "stop using", order: 3, text: "停止使用" }
                         } else {
@@ -216,6 +279,14 @@
                                 event.preventDefault()
                         }
                         console.log(device.udid)
+                    }
+                },
+                filters: {
+                    shortString(value) {
+                        if (value.length > 16) {
+                            return value.slice(0, 15) + "..."
+                        }
+                        return value;
                     }
                 },
                 mounted() {
