@@ -33,7 +33,8 @@
                 <template v-else>
                     <a :href='"/devices/"+scope.row.udid+"/remotecontrol"' target="_blank"
                         @click="clickStatus($event, scope.row)">
-                        {{!deviceStatusName(scope.row)}}
+                        <!-- {{!deviceStatusName(scope.row)}} -->
+                        {{!scope.row.text}}
                     </a>
                 </template>
             </template>
@@ -91,7 +92,14 @@
                         })
                     },
                     filteredDevices() {
-                        return this.devices;
+                        let sortBy = (key) => {
+                            return (a, b) => a[key] > b[key] ? 1 : (b[key] > a[key] ? -1 : 0)
+                        }
+
+                        return this.devices.map(d => {
+                            return Object.assign(d, this.deviceConvert(d))
+                        }).sort(sortBy("order")).reverse()
+
                         return [{
                             udid: "kjnl-dfljsasdklifjdklsfjlasdflsdfk",
                             platform: "android",
@@ -165,6 +173,19 @@
                             .then(ret => {
                                 console.log(ret)
                             })
+                    },
+                    deviceConvert(device) {
+                        if (!device.present) {
+                            return { status: "offline", order: 0, text: "设备离线" }
+                        } else if (device.colding) {
+                            return { status: "colding", order: 1, text: "设备清理中" }
+                        } else if (!device.using) {
+                            return { status: "use", order: 2, text: "点击开始使用" }
+                        } else if (device.userId == currentUserEmail) {
+                            return { status: "stop using", order: 3, text: "停止使用" }
+                        } else {
+                            return { status: "busy", order: 0.5, text: "忙碌中" }
+                        }
                     },
                     deviceStatusName(device) {
                         if (!device.present) {
