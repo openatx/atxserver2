@@ -9,6 +9,7 @@
   body,
   #content-wrapper {
     height: 100%;
+    overflow: hidden;
   }
 
   #content-wrapper {
@@ -23,6 +24,10 @@
 
   .height100 {
     height: 100%;
+  }
+
+  .height-fill {
+    height: -webkit-fill-available;
   }
 
   .grow-0 {
@@ -144,7 +149,7 @@
 {% block content %}
 <div class="container-fluid d-flex flex-column">
   <div class="row grow-1">
-    <div class="col-sm debugarea d-flex flex-column justify-content-center nopadding grow-0 height100">
+    <div class="col-sm debugarea d-flex flex-column justify-content-center nopadding grow-0 height-fill">
       <section class="debugarea" style="height: 2rem; line-height: 2rem; padding: 0 10px; justify-self: start">
         <span>
           <i class="fas fa-mobile-alt cursor-pointer" :class='{"fa-rotate-90": landscape}'></i>
@@ -157,8 +162,9 @@
           <i @click="hotfix" title="hotfix" class="fas fa-hammer"></i>
         </span>
       </section>
+      <!-- screen body -->
       <section class="screen debugarea d-flex grow-1 align-items-center justify-content-center"
-        style="line-height: 0px">
+        style="flex-basis: 0%; line-height: 0px">
         <!-- <canvas ref="fgCanvas" class="canvas-fg" v-bind:style="canvasStyle"></canvas> -->
         <canvas ref="bgCanvas" class="canvas-bg" v-bind:style="canvasStyle"></canvas>
         <span class="finger finger-0" style="transform: translate3d(200px, 100px, 0px)"></span>
@@ -171,7 +177,7 @@
         </button>
       </section>
     </div>
-    <div class="col-sm debugarea height100" style="overflow-y: auto">
+    <div class="col-sm debugarea height-fill" style="overflow-y: auto">
       <el-tabs v-model="activeName" @tab-click="handleTabClick">
         <el-tab-pane label="常用" name="common">
           <dl>
@@ -237,7 +243,7 @@
           displayLinked() {
             return this.display.ws !== null
           },
-          displayWSUrl(){
+          displayWSUrl() {
             let url = this.source.wdaUrl.replace(/^https?:\/\//, "ws://") + "/screen"
             return url
           }
@@ -259,15 +265,11 @@
                     this.closeWindowWhenReleased(5000)
                   })
                   .fail(ret => {
-                    let content = '设备' + this.idleTimeout + "秒内没有操作，设备自动释放，点击刷新重新占用该设备"
-                    this.$alert(content, '设备超时提示', {
-                      confirmButtonText: '刷新',
-                      type: 'warning'
-                    }).then(() => {
-                      location.reload()
-                    }).catch(() => {
+                    console.log(ret)
+                    if (ret.status === 403) { // forbidden
                       window.close()
-                    })
+                      return
+                    }
                   })
               } else {
                 $.getJSON("/api/v1/user/devices/" + udid + "/active")
@@ -277,6 +279,15 @@
                   .fail(function (ret) {
                     console.log(ret)
                     alert("设备可能被释放了，Press F12 to debug")
+                    // let content = '设备' + this.idleTimeout + "秒内没有操作，设备自动释放，点击刷新重新占用该设备"
+                    // this.$alert(content, '设备超时提示', {
+                    //   confirmButtonText: '刷新',
+                    //   type: 'warning'
+                    // }).then(() => {
+                    //   location.reload()
+                    // }).catch(() => {
+                    //   window.close()
+                    // })
                   })
               }
             }, interval)

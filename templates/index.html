@@ -206,23 +206,19 @@
                     }
                     ws.onmessage = (evt) => {
                         let m = JSON.parse(evt.data);
-                        switch (m.event) {
-                            case "update":
-                                this.devices = this.devices.map((v) => {
-                                    console.log(v.udid)
-                                    if (v.udid == m.data.udid) {
-                                        return m.data
-                                    }
-                                    return v
-                                })
-                                console.log("Updated:", this.devices)
-                                break;
-                            case "insert":
-                                this.devices.unshift(m.data);
-                                break;
-                            default:
-                                console.error("Unknown event type", m.event)
-                                break;
+                        let isUpdate = this.devices.some((v) => {
+                            return v.udid == m.data.udid;
+                        })
+                        if (isUpdate) {
+                            this.devices = this.devices.map((v) => {
+                                console.log(v.udid)
+                                if (v.udid == m.data.udid) {
+                                    return m.data
+                                }
+                                return v
+                            })
+                        } else {
+                            this.devices.unshift(m.data);
                         }
                     }
                     ws.onclose = (evt) => {

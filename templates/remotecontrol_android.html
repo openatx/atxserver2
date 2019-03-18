@@ -134,6 +134,7 @@
 <div class="container-fluid d-flex flex-column">
   <div class="row grow-1">
     <div class="col-sm debugarea d-flex flex-column justify-content-center nopadding grow-0 height-fill">
+      <!-- screen header -->
       <section class="debugarea" style="height: 32px; line-height: 32px; justify-self: start">
         {{!properties.serial}}
         <span>
@@ -153,16 +154,17 @@
         <span>
           <i @click="hotfix" title="hotfix" class="fas fa-hammer"></i>
         </span>
-
       </section>
+      <!-- screen body -->
       <section class="screen debugarea d-flex grow-1 align-items-center justify-content-center"
-        style="flex: 1; line-height: 0px" @dblclick="runKeyevent('WAKEUP')">
+        style="flex-basis: 0%; line-height: 0px" @dblclick="runKeyevent('WAKEUP')">
         <!-- <canvas ref="fgCanvas" class="canvas-fg" v-bind:style="canvasStyle"></canvas> -->
         <canvas ref="bgCanvas" class="canvas-bg" v-bind:style="canvasStyle"></canvas>
         <span class="finger finger-0" style="transform: translate3d(200px, 100px, 0px)"></span>
         <span class="finger finger-1" style="transform: translate3d(200px, 100px, 0px)"></span>
         <!-- <img style="z-index: 10" v-if="loading" src="/assets/loading.svg"> -->
       </section>
+      <!-- screen footer -->
       <section class="footer d-flex justify-content-around debugarea">
         <button class="btn btn-default grow-1" @click="runKeyevent('APP_SWITCH')">
           <i class="fas fa-window-restore"></i>
