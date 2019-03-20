@@ -56,6 +56,11 @@
                 <template v-else-if='"colding" == scope.row.status'>
                     <el-button disabled size="mini" type="primary">冷却中</span>
                 </template>
+                <template v-else-if='"busy" == scope.row.status'>
+                    <el-button disabled size="mini" type="warning">
+                        <i class="fas fa-lock color-yellow" v-show="scope.row.private"></i> 已被占用
+                    </el-button>
+                </template>
                 <template v-else-if='"stop using" == scope.row.status'>
                     <el-button @click="deviceRelease(scope.row.udid)" size="mini" type="danger">停用</el-button>
                 </template>
