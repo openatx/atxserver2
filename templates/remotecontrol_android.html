@@ -11,7 +11,7 @@
   body,
   #content-wrapper {
     height: 100%;
-    overflow: hidden;
+    /* overflow: hidden; */
   }
 
   #content-wrapper {
@@ -29,8 +29,8 @@
     height: 100%;
   }
 
-  .height-fill {
-    height: -webkit-fill-available;
+  .height-auto-fill {
+    /* height: -webkit-fill-available; */
   }
 
   .grow-0 {
@@ -90,7 +90,7 @@
 {% end %}
 
 {% block nav %}
-<nav class="navbar sticky-top navbar-expand-lg navbar-dark bg-dark" style="height: 55px;">
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark" style="height: 55px;">
   <div class="container-fluid">
     <a class="navbar-brand" href="/">
       <span class="title">ATXServer2</span></a>
@@ -133,7 +133,8 @@
 {% block content %}
 <div class="container-fluid d-flex flex-column">
   <div class="row grow-1">
-    <div class="col-sm debugarea d-flex flex-column justify-content-center nopadding grow-0 height-fill">
+    <div class="col-sm d-flex flex-column justify-content-center nopadding grow-0"
+      style="height: -webkit-fill-available">
       <!-- screen header -->
       <section class="debugarea" style="height: 32px; line-height: 32px; justify-self: start">
         {{!properties.serial}}
@@ -179,7 +180,7 @@
         </button>
       </section>
     </div>
-    <div class="col-sm debugarea height-fill" style="min-height: 0; overflow-y: auto">
+    <div class="col-sm height-auto-fill" style="min-height: 0; overflow-y: auto">
       <el-tabs v-model="activeName" @tab-click="handleTabClick">
         <el-tab-pane label="常用" name="common">
           <div ref="commonContainer" class="row">
@@ -371,7 +372,7 @@
           </p>
         </el-tab-pane>
         <el-tab-pane label="截图" name="screenshot">
-          <a :href="screenshotUrl">Screenshot</a>
+          <a :href="screenshotUrl" download>下载截图</a>
         </el-tab-pane>
       </el-tabs>
     </div>
@@ -391,6 +392,15 @@
 <script>
   const udid = "{{udid}}"
   const userEmail = "{{current_user.email}}"
+
+  // fill avaliable space except nvabar
+  $(function () {
+    function fitControlPanel() {
+      $(".height-auto-fill").height(document.body.clientHeight - $("nav").outerHeight(true));
+    }
+    window.addEventListener("resize", fitControlPanel)
+    fitControlPanel()
+  })
 
   $.getJSON("/api/v1/user/devices/" + udid)
     .then(ret => {
@@ -1278,7 +1288,7 @@
             return "http://" + this.address + "/term"
           },
           screenshotUrl() {
-            return "http://" + this.address + "/screenshot"
+            return "http://" + this.address + "/screenshot/0"
           },
           remoteConnectAddr() {
             return "adb connect " + this.source.remoteConnectAddress

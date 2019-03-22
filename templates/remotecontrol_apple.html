@@ -9,7 +9,6 @@
   body,
   #content-wrapper {
     height: 100%;
-    overflow: hidden;
   }
 
   #content-wrapper {
@@ -26,8 +25,8 @@
     height: 100%;
   }
 
-  .height-fill {
-    height: -webkit-fill-available;
+  .height-auto-fill {
+    /* height: -webkit-fill-available; */
   }
 
   .grow-0 {
@@ -149,7 +148,7 @@
 {% block content %}
 <div class="container-fluid d-flex flex-column">
   <div class="row grow-1">
-    <div class="col-sm debugarea d-flex flex-column justify-content-center nopadding grow-0 height-fill">
+    <div class="col-sm debugarea d-flex flex-column justify-content-center nopadding grow-0 height-auto-fill">
       <section class="debugarea" style="height: 2rem; line-height: 2rem; padding: 0 10px; justify-self: start">
         <span>
           <i class="fas fa-mobile-alt cursor-pointer" :class='{"fa-rotate-90": landscape}'></i>
@@ -177,7 +176,7 @@
         </button>
       </section>
     </div>
-    <div class="col-sm debugarea height-fill" style="overflow-y: auto">
+    <div class="col-sm debugarea height-auto-fill" style="overflow-y: auto">
       <el-tabs v-model="activeName" @tab-click="handleTabClick">
         <el-tab-pane label="常用" name="common">
           <dl>
@@ -210,10 +209,17 @@
   const udid = "{{udid}}"
   const userEmail = "{{current_user.email}}"
 
+  // fill avaliable space except nvabar
+  $(function () {
+    function fitControlPanel() {
+      $(".height-auto-fill").height(document.body.clientHeight - $("nav").outerHeight(true));
+    }
+    window.addEventListener("resize", fitControlPanel)
+    fitControlPanel()
+  })
+
   $.getJSON("/api/v1/user/devices/" + udid)
     .then(ret => {
-      // closeWindowWhenReleased()
-
       vm = new Vue({
         el: "#content-wrapper",
         data: Object.assign({

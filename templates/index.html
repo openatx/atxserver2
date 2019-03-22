@@ -18,6 +18,10 @@
     .color-yellow {
         color: burlywood;
     }
+
+    .cursor-pointer {
+        cursor: pointer;
+    }
 </style>
 {% end %}
 
@@ -76,6 +80,13 @@
             </template>
         </el-table-column>
         <!-- <el-table-column prop="platform" label="类型"></el-table-column> -->
+        <el-table-column label="设备名" prop="prop_name"></el-table-column>
+        <el-table-column label="资产编号">
+            <template slot-scope="scope">
+                <!-- <el-input size="mini"></el-input> -->
+                <span v-text="prop_propertyId"></span> <i class="fas fa-edit cursor-pointer"></i>
+            </template>
+        </el-table-column>
         <el-table-column label="设备编号">
             <template slot-scope="scope">
                 <template v-if="scope.row.status == 'stop using'">
