@@ -360,19 +360,28 @@
             </ul>
           </div>
         </el-tab-pane>
-        <el-tab-pane label="安装管理" name="second">
+        <el-tab-pane label="安装管理" name="packagemanager">
+          <el-upload ref="upload" class="upload-demo" drag action="/uploads" :on-success="onUpload" multiple>
+            <i class="el-icon-upload"></i>
+            <div class="el-upload__text">将文件拖到此处，或<em>点击上传</em></div>
+            <div class="el-upload__tip" slot="tip">暂时只支持apk的上传</div>
+          </el-upload>
           <div class="form-group">
             <label>URL</label>
             <input type="text" class="form-control form-control-sm" placeholder="http://..." v-model="app.installUrl">
+          </div>
+          <div>
+            <el-checkbox :value="true" disabled>安装前卸载同包名应用</el-checkbox>
           </div>
           <button class="btn btn-outline-primary btn-sm" @click="appInstall"
             :disabled="!app.finished || !app.installUrl">安裝</button>
           <p>
             <pre v-show="!!app.message" v-text="app.message"></pre>
+            <small><code v-text="app.packageName"></code></small>
           </p>
         </el-tab-pane>
         <el-tab-pane label="截图" name="screenshot">
-          <a :href="screenshotUrl" download>下载截图</a>
+          <a :href="screenshotUrl+'?download=screenshot.jpg'" download>下载截图</a>
         </el-tab-pane>
       </el-tabs>
     </div>
@@ -439,6 +448,7 @@
           app: {
             installUrl: "",
             finished: true,
+            packageName: "",
             message: "",
           },
           tabColumnStyle: 'col-6',
@@ -453,12 +463,25 @@
           }, {}),
         }, ret.data),
         methods: {
+          onUpload(resp, file, files) {
+            if (!resp.success) {
+              this.$message({
+                message: resp.description,
+                type: "error"
+              })
+              return
+            }
+            this.app.installUrl = resp.data.url;
+            this.appInstall()
+          },
           appInstall() {
+            this.app.packageName = ""
             this.app.finished = false
             this.app.message = "安裝中 ..."
+
             $.ajax({
               method: "post",
-              url: this.source.url + "/devices/" + this.udid + "/app/install",
+              url: this.source.url + "/app/install?udid=" + this.udid,
               data: {
                 url: this.app.installUrl,
                 secret: this.source.secret,
@@ -467,6 +490,7 @@
               console.log(ret)
               if (ret.success) {
                 this.app.message = ret.output;
+                this.app.packageName = ret.packageName;
               } else {
                 this.app.message = ret.description;
               }
