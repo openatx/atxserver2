@@ -179,30 +179,60 @@
     <div class="col-sm debugarea height-auto-fill" style="overflow-y: auto">
       <el-tabs v-model="activeName" @tab-click="handleTabClick">
         <el-tab-pane label="常用" name="common">
-          <dl>
-            <dt>Display</dt>
-            <dd><code>{{!display.width}}x{{!display.height}}</code></dd>
-            <dt>SessionID</dt>
-            <dd><code v-text="session.id"></code></dd>
-            <dt>Frames</dt>
-            <dd><code v-text="session.frameCount"></code></dd>
-            <dt>FPS</dt>
-            <dd><code v-text="display.fps"></code></dd>
-          </dl>
-          <hr>
+          <div class="card">
+            <div class="card-header">
+              调试信息
+            </div>
+            <div class="card-body">
+              <dl>
+                <dt>Display</dt>
+                <dd><code>{{!display.width}}x{{!display.height}}</code></dd>
+                <dt>SessionID</dt>
+                <dd><code v-text="session.id"></code></dd>
+                <dt>Frames</dt>
+                <dd><code v-text="session.frameCount"></code></dd>
+                <dt>FPS</dt>
+                <dd><code v-text="display.fps"></code></dd>
+                <dt>WDA URL</dt>
+                <dd>
+                  <code v-text="source.wdaUrl"></code>
+                  <i :data-clipboard-text="source.wdaUrl" class="far fa-copy clipboard-copy cursor-pointer"></i>
+                </dd>
+              </dl>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              弹窗操作
+            </div>
+            <div class=card-body">
+              <el-button>Accept(TODO)</el-button>
+            </div>
+          </div>
+
           <el-upload ref="upload" drag action="/uploads" :on-success="onUpload">
             <i class="el-icon-upload"></i>
             <div class="el-upload__text">将安装包拖到此处安装，或<em>点击上传</em></div>
             <div class="el-upload__tip" slot="tip">只能上传ipa文件，且不超过2G</div>
           </el-upload>
+
         </el-tab-pane>
       </el-tabs>
+      <div class="row">
+        <div class="col-6">
+
+
+        </div>
+      </div>
+
     </div>
   </div>
 </div>
 {% end %}
 
 {% block script %}
+<script src="https://cdn.jsdelivr.net/npm/clipboard@2.0.4/dist/clipboard.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/css-element-queries@1.1.1/src/ResizeSensor.min.js"></script>
 <script src="{{static_url('javascripts/imagepool.js')}}"></script>
 <script>
@@ -261,6 +291,30 @@
           }
         },
         methods: {
+          initClipboardJS() {
+            var clipboard = new ClipboardJS(".clipboard-copy")
+
+            clipboard.on('success', function (e) {
+              e.clearSelection()
+              showTooltip(e.trigger, "Copied!")
+            })
+
+            document.querySelectorAll(".clipboard-copy").forEach(e => {
+              e.addEventListener('mouseleave', clearTooltip);
+              e.addEventListener('blur', clearTooltip);
+            })
+
+            function clearTooltip(e) {
+              const target = e.currentTarget;
+              setTimeout(() => {
+                target.innerHTML = ""
+              }, 200)
+            }
+
+            function showTooltip(elem, msg) {
+              elem.innerHTML = "&nbsp;<small>" + msg + "</small>"
+            }
+          },
           onUpload(resp, file, files) {
             if (!resp.success) {
               this.$message({
@@ -689,6 +743,9 @@
             let duration = moment.now() - moment(this.usingBeganAt)
             this.$refs.usingTime.innerHTML = moment.utc(duration).format("HH:mm:ss")
           }, 1000)
+
+          // 初始化剪贴板
+          this.initClipboardJS()
         },
       })
     })
