@@ -199,3 +199,46 @@ Server: TornadoServer/4.5.3
     "success": true
 }
 ```
+
+### 通过PROVIDER进行APK安装
+
+这个要用到`PROVIDER_URL`对应设备信息接口返回值中的`source.url`字段,另外需要指定udid（因为provider可能连接了多个手机）
+
+**POST** $PROVIDER_URL/app/install?udid=xxxx
+
+```bash
+$ http --form POST $PROVIDER_URL/app/install?udid=xxxx url==http://example.com/some.apk
+# 成功返回 200
+{
+    "success": true
+    "return": 0,
+    "output": "Success\r\n",
+    "packageName": "io.appium.android.apis",
+}
+# 失败返回 200
+{
+    "description": "Failure reason",
+    "success": false
+}
+```
+
+### 通过PROVIDER进行IPA安装
+
+这个要用到`PROVIDER_URL`对应设备信息接口返回值中的`source.url`字段,另外需要指定udid（因为provider可能连接了多个手机）
+
+**POST** $PROVIDER_URL/app/install?udid=xxxx
+
+```bash
+$ http --form POST $PROVIDER_URL/app/install?udid=xxxx url==http://example.com/some.ipa
+# 成功返回 200
+{
+    "success": true
+    "return": 0,
+    "output": "Success",
+}
+# 失败返回 200
+{
+    "description": "Failure reason",
+    "success": false
+}
+```

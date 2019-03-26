@@ -79,7 +79,7 @@ docker run -it --rm --privileged -v /dev/bus/usb:/dev/bus/usb --net host \
 
 **Step 3: iOS设备接入**
 
-TODO
+参考项目介绍 [atxserver2-ios-provider](https://github.com/openatx/atxserver2-ios-provider)
 
 ## 操作指南
 鼠标操作
