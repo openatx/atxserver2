@@ -23,6 +23,11 @@
   #app {
     display: flex;
     flex: 1;
+    min-height: 0%;
+  }
+
+  .flex-reset {
+    min-height: 0%;
   }
 
   .height100 {
@@ -30,7 +35,7 @@
   }
 
   .height-auto-fill {
-    /* height: -webkit-fill-available; */
+    height: -webkit-fill-available;
   }
 
   .grow-0 {
@@ -132,7 +137,7 @@
 
 {% block content %}
 <div class="container-fluid d-flex flex-column">
-  <div class="row grow-1">
+  <div class="row grow-1 flex-reset">
     <div class="col-sm d-flex flex-column justify-content-center nopadding grow-0"
       style="height: -webkit-fill-available">
       <!-- screen header -->
@@ -157,7 +162,7 @@
         </span>
       </section>
       <!-- screen body -->
-      <section class="screen debugarea d-flex grow-1 align-items-center justify-content-center"
+      <section class="screen debugarea d-flex grow-1 align-items-center justify-content-center flex-reset"
         style="flex-basis: 0%; line-height: 0px" @dblclick="runKeyevent('WAKEUP')">
         <!-- <canvas ref="fgCanvas" class="canvas-fg" v-bind:style="canvasStyle"></canvas> -->
         <canvas ref="bgCanvas" class="canvas-bg" v-bind:style="canvasStyle"></canvas>
@@ -401,15 +406,6 @@
 <script>
   const udid = "{{udid}}"
   const userEmail = "{{current_user.email}}"
-
-  // fill avaliable space except nvabar
-  $(function () {
-    function fitControlPanel() {
-      $(".height-auto-fill").height(document.body.clientHeight - $("nav").outerHeight(true));
-    }
-    window.addEventListener("resize", fitControlPanel)
-    fitControlPanel()
-  })
 
   $.getJSON("/api/v1/user/devices/" + udid)
     .then(ret => {

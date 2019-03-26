@@ -19,6 +19,7 @@
   #app {
     display: flex;
     flex-grow: 1;
+    min-height: 0%;
   }
 
   .height100 {
@@ -26,7 +27,11 @@
   }
 
   .height-auto-fill {
-    /* height: -webkit-fill-available; */
+    height: -webkit-fill-available;
+  }
+
+  .flex-reset {
+    min-height: 0%;
   }
 
   .grow-0 {
@@ -100,6 +105,10 @@
   .finger.longClick {
     border: 1mm solid rebeccapurple;
   }
+
+  .card-columns {
+    column-count: 2;
+  }
 </style>
 {% end %}
 
@@ -147,7 +156,7 @@
 
 {% block content %}
 <div class="container-fluid d-flex flex-column">
-  <div class="row grow-1">
+  <div class="row grow-1 flex-reset">
     <div class="col-sm debugarea d-flex flex-column justify-content-center nopadding grow-0 height-auto-fill">
       <section class="debugarea" style="height: 2rem; line-height: 2rem; padding: 0 10px; justify-self: start">
         <span>
@@ -157,12 +166,9 @@
           <i v-if="displayLinked" class="fas fa-link" style="color: green"></i>
           <i v-else @click="mirrorDisplay" class="fas fa-unlink" style="color: red"></i>
         </span>
-        <span>
-          <i @click="hotfix" title="hotfix" class="fas fa-hammer"></i>
-        </span>
       </section>
       <!-- screen body -->
-      <section class="screen debugarea d-flex grow-1 align-items-center justify-content-center"
+      <section class="screen debugarea d-flex grow-1 align-items-center justify-content-center flex-reset"
         style="flex-basis: 0%; line-height: 0px">
         <!-- <canvas ref="fgCanvas" class="canvas-fg" v-bind:style="canvasStyle"></canvas> -->
         <canvas ref="bgCanvas" class="canvas-bg" v-bind:style="canvasStyle"></canvas>
@@ -176,58 +182,77 @@
         </button>
       </section>
     </div>
-    <div class="col-sm debugarea height-auto-fill" style="overflow-y: auto">
+    <div class="col-sm debugarea height-auto-fill flex-reset" style="overflow-y: auto">
       <el-tabs v-model="activeName" @tab-click="handleTabClick">
         <el-tab-pane label="常用" name="common">
-          <div class="card">
-            <div class="card-header">
-              调试信息
+          <div class="card-columns">
+            <div class="card">
+              <div class="card-header">
+                常用功能
+              </div>
+              <div class="card-body">
+                <el-button size="mini" @click="hotfix">
+                  <i class="fas fa-hammer"></i>
+                  修复旋转
+                </el-button>
+              </div>
             </div>
-            <div class="card-body">
-              <dl>
-                <dt>Display</dt>
-                <dd><code>{{!display.width}}x{{!display.height}}</code></dd>
-                <dt>SessionID</dt>
-                <dd><code v-text="session.id"></code></dd>
-                <dt>Frames</dt>
-                <dd><code v-text="session.frameCount"></code></dd>
-                <dt>FPS</dt>
-                <dd><code v-text="display.fps"></code></dd>
-                <dt>WDA URL</dt>
-                <dd>
-                  <code v-text="source.wdaUrl"></code>
-                  <i :data-clipboard-text="source.wdaUrl" class="far fa-copy clipboard-copy cursor-pointer"></i>
-                </dd>
-              </dl>
+
+            <div class="card">
+              <div class="card-header">
+                调试信息
+              </div>
+              <div class="card-body">
+                <dl>
+                  <dt>Display</dt>
+                  <dd><code>{{!display.width}}x{{!display.height}}</code></dd>
+                  <dt>SessionID</dt>
+                  <dd><code v-text="session.id"></code></dd>
+                  <dt>FPS/Frames</dt>
+                  <dd>
+                    <code v-text="display.fps"></code>
+                    /
+                    <small><code v-text="session.frameCount"></code></small>
+                  </dd>
+                  <dt>WDA URL</dt>
+                  <dd>
+                    <code v-text="source.wdaUrl"></code>
+                    <i :data-clipboard-text="source.wdaUrl" class="far fa-copy clipboard-copy cursor-pointer"></i>
+                  </dd>
+                </dl>
+              </div>
             </div>
+
+            <div class="card">
+              <div class="card-header">
+                安装管理
+              </div>
+              <div class=card-body">
+                <!-- <el-button>Accept(TODO)</el-button> -->
+                <div style="padding: 10px">
+                  <el-upload ref="upload" drag accept=".ipa" action="/uploads" :on-success="onUpload"
+                    :on-preview="onUploadSelect">
+                    <i class="el-icon-upload"></i>
+                    <div class="el-upload__text">将安装包拖到此处安装，或<em>点击上传</em></div>
+                    <div class="el-upload__tip" slot="tip">只能上传ipa文件，且不超过2G</div>
+                  </el-upload>
+                  <div class="form-group">
+                    <label>URL</label>
+                    <input type="text" placeholder="http://..." v-model="app.url" class="form-control form-control-sm">
+                  </div>
+                  <el-button @click="appInstall" :disabled="!app.finished || !app.url" size="small">安装</el-button>
+                  <hr v-if="!!app.message">
+                  <pre style="white-space: normal" v-text="app.message"></pre>
+                </div>
+              </div>
+            </div>
+
           </div>
-
-          <div class="card">
-            <div class="card-header">
-              弹窗操作
-            </div>
-            <div class=card-body">
-              <el-button>Accept(TODO)</el-button>
-            </div>
-          </div>
-
-          <el-upload ref="upload" drag action="/uploads" :on-success="onUpload">
-            <i class="el-icon-upload"></i>
-            <div class="el-upload__text">将安装包拖到此处安装，或<em>点击上传</em></div>
-            <div class="el-upload__tip" slot="tip">只能上传ipa文件，且不超过2G</div>
-          </el-upload>
-
         </el-tab-pane>
       </el-tabs>
-      <div class="row">
-        <div class="col-6">
-
-
-        </div>
-      </div>
-
     </div>
   </div>
+</div>
 </div>
 {% end %}
 
@@ -239,14 +264,6 @@
   const udid = "{{udid}}"
   const userEmail = "{{current_user.email}}"
 
-  // fill avaliable space except nvabar
-  $(function () {
-    function fitControlPanel() {
-      $(".height-auto-fill").height(document.body.clientHeight - $("nav").outerHeight(true));
-    }
-    window.addEventListener("resize", fitControlPanel)
-    fitControlPanel()
-  })
 
   $.getJSON("/api/v1/user/devices/" + udid)
     .then(ret => {
@@ -274,6 +291,10 @@
             height: 0,
             fps: 0,
             ws: null,
+          },
+          app: {
+            message: "",
+            finished: true,
           },
           pageHidden: false,
           imagePool: new ImagePool(100),
@@ -315,6 +336,9 @@
               elem.innerHTML = "&nbsp;<small>" + msg + "</small>"
             }
           },
+          onUploadSelect(file) {
+            this.app.url = file.response.data.url;
+          },
           onUpload(resp, file, files) {
             if (!resp.success) {
               this.$message({
@@ -323,19 +347,33 @@
               })
               return
             }
-            // if (!resp.data.iconUrl) {
-            // resp.data.iconUrl = "/static/images/android-logo-robot.png"
-            // }
-            // this.files.push(resp.data)
-            console.log(resp)
-            console.log(file)
-            console.log(files)
-            this.$refs.upload.clearFiles()
+            this.app.url = resp.data.url;
+            return this.appInstall()
+          },
+          appInstall() {
+            const url = this.app.url
+
+            this.app.finished = false
+            this.app.message = "安装中 ..."
+            $.ajax({
+              method: "post",
+              url: this.source.url + "/app/install?udid=" + this.udid,
+              data: {
+                url: url,
+              }
+            }).then(ret => {
+              if (!ret.success) {
+                this.app.message = ret.description;
+              } else {
+                this.app.message = "安装成功"
+              }
+            }).always(() => {
+              this.app.finished = true
+            })
           },
           showFPS() {
             let frame = this.session.frameCount;
             setInterval(() => {
-              // console.log(this.session.frameCount, frame)
               this.display.fps = this.session.frameCount - frame
               frame = this.session.frameCount;
             }, 1000);
@@ -415,7 +453,7 @@
           },
           disableTouch() {
             let element = this.canvas.bg;
-            element.style.cursor = 'not-allowed' // not working
+            element.style.cursor = 'not-allowed' // set el.style is not working
             element.style.pointerEvents = "none"
           },
           enableTouch() {
@@ -591,7 +629,7 @@
               }
               e.preventDefault()
 
-              element.style.cursor = 'not-allowed' // not working
+              element.style.cursor = "not-allowed" // not working
               element.style.pointerEvents = "none"
 
               let { fingerX, fingerY, x, y } = coords(e)
