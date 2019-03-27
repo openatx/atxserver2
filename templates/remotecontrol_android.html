@@ -471,14 +471,11 @@
                 url: this.app.installUrl,
                 secret: this.source.secret,
               }
-            }).then(ret => {
-              console.log(ret)
-              if (ret.success) {
-                this.app.message = ret.output;
-                this.app.packageName = ret.packageName;
-              } else {
-                this.app.message = ret.description;
-              }
+            }).done(ret => {
+              this.app.message = ret.output;
+              this.app.packageName = ret.packageName;
+            }).fail(err => {
+              this.app.message = err.responseJSON.description;
             }).always(() => {
               this.app.finished = true
             })

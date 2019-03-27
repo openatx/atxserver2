@@ -188,19 +188,42 @@
           <div class="card-columns">
             <div class="card">
               <div class="card-header">
-                常用功能
+                <i class="fab fa-angellist"></i> 常用功能
+                <span style="font-size: 0.7em; padding-top: 5px; color: gray">注: iOS的弹窗不能通过屏幕点击来选择</span>
               </div>
               <div class="card-body">
                 <el-button size="mini" @click="hotfix">
                   <i class="fas fa-hammer"></i>
                   修复旋转
                 </el-button>
+
+                <el-button size="mini" :loading="alert.loading" @click="chooseAlertButtons">
+                  选择弹框按钮
+                </el-button>
+                <el-dialog title="弹窗选择" :visible.sync="alert.visible">
+                  <span style="padding: 5px" v-for="v in alert.buttons">
+                    <el-button round size="small" @click="alertAccept(v); alert.visible=false">{{!v}}</el-button>
+                  </span>
+                </el-dialog>
+
               </div>
             </div>
 
             <div class="card">
               <div class="card-header">
-                调试信息
+                <i class="fas fa-bolt"></i> 快捷启动
+              </div>
+              <div class="card-body">
+                <el-button round size="small" @click="appOpen('com.apple.Preferences')">
+                  <i class="el-icon-setting"></i>
+                  设置
+                </el-button>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-header">
+                <i class="fas fa-bug"></i> 调试信息
               </div>
               <div class="card-body">
                 <dl>
@@ -225,7 +248,7 @@
 
             <div class="card">
               <div class="card-header">
-                安装管理
+                <i class="fas fa-cubes"></i> 安装管理
               </div>
               <div class=card-body">
                 <!-- <el-button>Accept(TODO)</el-button> -->
@@ -240,7 +263,8 @@
                     <label>URL</label>
                     <input type="text" placeholder="http://..." v-model="app.url" class="form-control form-control-sm">
                   </div>
-                  <el-button @click="appInstall" :disabled="!app.finished || !app.url" size="small">安装</el-button>
+                  <el-button @click="appInstall" :loading="!app.finished" :disabled="!app.finished || !app.url"
+                    size="small">安装</el-button>
                   <hr v-if="!!app.message">
                   <pre style="white-space: normal" v-text="app.message"></pre>
                 </div>
@@ -292,6 +316,11 @@
             fps: 0,
             ws: null,
           },
+          alert: {
+            buttons: [],
+            loading: false,
+            visible: false,
+          },
           app: {
             message: "",
             finished: true,
@@ -312,6 +341,59 @@
           }
         },
         methods: {
+          appOpen(bundleId) {
+            return $.ajax({
+              method: "post",
+              url: this.path2url("/session"),
+              data: JSON.stringify({
+                desiredCapabilities: {
+                  bundleId: bundleId,
+                  shouldWaitForQuiescence: true,
+                }
+              })
+            }).then(ret => {
+              this.session.id = ret.sessionId
+            })
+          },
+          chooseAlertButtons() {
+            this.alert.buttons = []
+            this.alert.loading = true
+            return $.ajax({
+              method: "get",
+              url: this.path2url("/session/" + this.session.id + "/wda/alert/buttons")
+            }).then(ret => {
+              switch (ret.status) {
+                case 0:
+                  this.alert.buttons = ret.value
+                  this.$nextTick(() => {
+                    this.alert.visible = true
+                  })
+                  break;
+                case 1:
+                  this.$alert(ret.value)
+                  break;
+                case 27:
+                  this.$alert("未检测到系统弹窗")
+                  break;
+                default:
+                  this.$alert("未知异常，打开开发者选项查看问题")
+                  console.error(ret)
+              }
+            }).always(() => {
+              this.alert.loading = false
+            })
+          },
+          alertAccept(name) {
+            let data = null;
+            if (typeof name === 'string' || name instanceof String) {
+              data = JSON.stringify({ name: name })
+            }
+            return $.ajax({
+              method: "post",
+              url: this.path2url("/session/" + this.session.id + "/alert/accept"),
+              data: data,
+            })
+          },
           initClipboardJS() {
             var clipboard = new ClipboardJS(".clipboard-copy")
 
@@ -361,12 +443,10 @@
               data: {
                 url: url,
               }
-            }).then(ret => {
-              if (!ret.success) {
-                this.app.message = ret.description;
-              } else {
-                this.app.message = "安装成功"
-              }
+            }).done(ret => {
+              this.app.message = "安装成功"
+            }).fail(err => {
+              this.app.message = "安装失败 " + err.responseJSON.description;
             }).always(() => {
               this.app.finished = true
             })
@@ -417,13 +497,14 @@
             return $.ajax({
               url: this.path2url("/wda/homescreen"),
               method: "POST",
+            }).then(() => {
+              setTimeout(() => {
+                this.hotfix()
+              }, 500)
             })
-              .then(function (ret) {
-                console.log(ret);
-              })
           },
           hotfix() {
-            $.ajax({
+            return $.ajax({
               url: this.path2url("/status")
             }).then(ret => {
               this.session.id = ret.sessionId
@@ -432,8 +513,10 @@
                 url: this.path2url("/session/" + this.session.id + "/window/size")
               })
             }).then(ret => {
-              this.display.width = ret.value.width;
-              this.display.height = ret.value.height;
+              if (ret.value.width && ret.value.height) { // width and height might be 0
+                this.display.width = ret.value.width;
+                this.display.height = ret.value.height;
+              }
             })
           },
           stopUsing() {

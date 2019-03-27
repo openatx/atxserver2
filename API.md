@@ -215,7 +215,7 @@ $ http --form POST $PROVIDER_URL/app/install?udid=xxxx url==http://example.com/s
     "output": "Success\r\n",
     "packageName": "io.appium.android.apis",
 }
-# 失败返回 200
+# 失败返回 400 or 500
 {
     "description": "Failure reason",
     "success": false
@@ -236,7 +236,7 @@ $ http --form POST $PROVIDER_URL/app/install?udid=xxxx url==http://example.com/s
     "return": 0,
     "output": "Success",
 }
-# 失败返回 200
+# 失败返回 400 or 500
 {
     "description": "Failure reason",
     "success": false
