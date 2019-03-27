@@ -1,0 +1,17 @@
+version: '3'
+services:
+  web:
+    build: .
+    ports:
+    - "4000:4000"
+    environment:
+      RDB_HOST: rethinkdb
+    links:
+    - rethinkdb
+    depends_on:
+    - rethinkdb
+    # restart: on-failure
+  rethinkdb:
+    image: rethinkdb:2.3.6
+    volumes:
+      - ./rethinkdb_data:/data

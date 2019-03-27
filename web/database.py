@@ -69,6 +69,7 @@ class DB(object):
             rdb.table("devices").filter({
                 "using": True
             }).pluck("udid"))
+
         for d in devices:
             logger.debug("Device: %s is in using state", d['udid'])
             D(d['udid']).release_until_idle()
