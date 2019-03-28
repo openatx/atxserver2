@@ -47,10 +47,8 @@ class APIDeviceListHandler(CorsMixin, BaseRequestHandler):
 
         self.write_json({
             "success": True,
-            "data": {
-                "devices": devices,
-                "count": await db.table_devices.count(),
-            }
+            "devices": devices,
+            "count": await db.table_devices.count(),
         })  # yapf: disable
 
     # async def put(self):
@@ -114,7 +112,7 @@ class APIUserDeviceHandler(AuthRequestHandler):
 
         self.write_json({
             "success": True,
-            "data": data,
+            "device": data,
         })
 
     async def get(self, udid=None):
@@ -234,7 +232,8 @@ class DeviceListHandler(AuthRequestHandler):
 
 class DeviceChangesWSHandler(BaseWebSocketHandler):
     def write_json(self, data):
-        self.ws_connection.write_message(jsondate.dumps(data))
+        # self.ws_connection.write_message(jsondate.dumps(data))
+        self.write_message(jsondate.dumps(data))
 
     async def open(self):
         self.__opened = True

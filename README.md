@@ -118,6 +118,9 @@ docker run -it --rm --privileged -v /dev/bus/usb:/dev/bus/usb --net host \
 ## 接口
 详情点击 接口[REST API](API.md)
 
+Examples:
+
+- [Install app and run uiautomator2 test](examples/android_test.py)
 
 ## Thanks
 - <https://github.com/openstf>
