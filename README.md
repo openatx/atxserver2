@@ -9,7 +9,16 @@
 - Python3.6+
 - [RethinkDB](https://rethinkdb.com/)
 
-## 部署
+## 部署方案1 （docker-compose方式）
+代码Clone到本地
+
+接下来切换到代码目录，只需要再执行一条命令即可。
+
+```bash
+docker-compose up
+```
+
+## 部署方案2 （手动部署）
 **Step 1**
 
 先准备好一个rethinkdb服务器(推荐部署到Linux上) 具体方法查看[RethinkDB安装文档](https://rethinkdb.com/docs/install/)
