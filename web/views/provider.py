@@ -8,7 +8,7 @@ import uuid
 from tornado.ioloop import IOLoop
 from logzero import logger
 
-import rethinkdb as r
+from rethinkdb import r
 from ..database import db, time_now
 from .base import BaseWebSocketHandler
 

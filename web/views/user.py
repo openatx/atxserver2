@@ -2,7 +2,7 @@
 #
 
 from tornado.web import authenticated
-import rethinkdb as r
+from rethinkdb import r
 
 from ..database import db, time_now
 from .base import AuthRequestHandler

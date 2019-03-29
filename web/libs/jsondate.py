@@ -1,7 +1,7 @@
 # coding: utf-8
 #
 
-import rethinkdb as r
+from rethinkdb import r
 import json
 import datetime
 

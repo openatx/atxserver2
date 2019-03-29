@@ -4,7 +4,7 @@
 import datetime
 import json
 
-import rethinkdb as r
+from rethinkdb import r
 from logzero import logger
 
 from . import settings

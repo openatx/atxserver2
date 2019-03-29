@@ -6,7 +6,7 @@ import os
 import sys
 import time
 
-import rethinkdb as r
+from rethinkdb import r
 
 
 deadline = time.time() + 10

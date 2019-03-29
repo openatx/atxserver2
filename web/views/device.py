@@ -4,7 +4,7 @@
 import json
 import datetime
 
-import rethinkdb as r
+from rethinkdb import r
 from logzero import logger
 from tornado.web import authenticated
 from tornado.ioloop import IOLoop

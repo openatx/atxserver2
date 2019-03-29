@@ -5,7 +5,7 @@ import argparse
 import socket
 from pprint import pprint
 
-import rethinkdb as r
+from rethinkdb import r
 import tornado.ioloop
 from logzero import logger
 from tornado.log import enable_pretty_logging
