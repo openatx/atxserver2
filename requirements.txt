@@ -1,6 +1,6 @@
 bunch
 logzero
-rethinkdb==2.3.0.post6
-tornado==4.5.3
+tornado==6.0.*
 requests
 apkutils-patch>=0.5.4,<=0.6.0
+git+git://github.com/codeskyblue/rethinkdb-python@patch

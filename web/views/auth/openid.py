@@ -190,7 +190,7 @@ class OpenIdMixin(object):
             #     required.append(name)
             # args["openid.ax.required"] = ",".join(required)
 
-            args["openid.ax.required"] = ",".join(ax_attrs)  # Patch(ssx)
+            args["openid.sreg.required"] = ",".join(ax_attrs)  # Patch(ssx)
         if oauth_scope:
             args.update({
                 "openid.ns.oauth":
