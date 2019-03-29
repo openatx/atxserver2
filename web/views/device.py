@@ -81,7 +81,7 @@ class APIUserDeviceActiveHandler(AuthRequestHandler):
             })
 
 
-class APIDeviceHandler(BaseRequestHandler):
+class APIDeviceHandler(CorsMixin, BaseRequestHandler):
     async def get(self, udid):
         try:
             data = await db.table("devices").get(udid).without("sources").run()
