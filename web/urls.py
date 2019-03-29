@@ -4,9 +4,10 @@
 import os
 
 from .views import LogoutHandler, MainHandler
-from .views.device import (DeviceChangesWSHandler, DeviceItemHandler, DeviceListHandler,
-                           APIUserDeviceHandler, APIDeviceListHandler, APIUserDeviceActiveHandler,
-                           AndroidDeviceControlHandler, AppleDeviceListHandler)
+from .views.device import (
+    DeviceChangesWSHandler, DeviceItemHandler, DeviceListHandler,
+    APIUserDeviceHandler, APIDeviceListHandler, APIUserDeviceActiveHandler,
+    AndroidDeviceControlHandler, AppleDeviceListHandler, APIDeviceHandler)
 from .views.provider import ProviderHeartbeatWSHandler
 from .views.upload import UploadItemHandler, UploadListHandler
 from .views.user import (UserHandler, UserGroupCreateHandler,
@@ -34,6 +35,7 @@ urlpatterns = [
     (r"/list", make_redirect_handler("/api/v1/devices")),
     # RESP API
     (r"/api/v1/devices", APIDeviceListHandler), # GET
+    (r"/api/v1/devices/([^/]+)", APIDeviceHandler), # GET
     (r"/api/v1/user", APIUserHandler), # GET
     (r"/api/v1/user/devices", APIUserDeviceHandler), # GET, POST
     (r"/api/v1/user/devices/([^/]+)", APIUserDeviceHandler), # GET

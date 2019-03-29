@@ -81,6 +81,24 @@ class APIUserDeviceActiveHandler(AuthRequestHandler):
             })
 
 
+class APIDeviceHandler(BaseRequestHandler):
+    async def get(self, udid):
+        try:
+            data = await db.table("devices").get(udid).without("sources").run()
+            self.write_json({
+                "success": True,
+                "device": data,
+            })
+        except r.errors.ReqlNonExistenceError:
+            # without on non-object will raise error
+            self.set_status(400)  # bad request
+            self.write_json({
+                "success": False,
+                "description": "device not found %s" % udid,
+            })
+            return
+
+
 class APIUserDeviceHandler(AuthRequestHandler):
     """ device Acquire and Release """
 
@@ -90,7 +108,7 @@ class APIUserDeviceHandler(AuthRequestHandler):
             self.set_status(400)  # bad request
             self.write_json({
                 "success": False,
-                "description": "device not found " + id,
+                "description": "device not found " + udid,
             })
             return
         if data.get('userId') != self.current_user.email:

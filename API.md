@@ -75,6 +75,36 @@ $ HTTP GET $SERVER_URL/api/v1/devices
 
 usable等价于`{present: true, using: false, colding: false}`
 
+### 获取单个设备信息（不包含sources字段)
+
+**GET** /api/v1/devices
+
+```bash
+$ HTTP GET $SERVER_URL/api/v1/devices/${udid}
+{
+    "success": true,
+    "device": {
+        "udid": "6EB0217704000486",
+        "platform": "android",
+        "present": true,
+        "using": false,
+        "colding": false,
+        "userId": null,
+        "properties": {
+            "brand": "HONOR",
+            "model": "DUK-AL20",
+            "name": "华为 荣耀 V9",
+            "serial": "6EB0217704000486",
+            "version": "8.0.0"
+        },
+        "updatedAt": "2019-03-29T14:53:56.569000",
+        "usingBeganAt": "2019-03-28T18:33:23.100000"
+    }
+}
+```
+
+If udid not found, status code = 400
+
 ### 占用设备
 
 **POST** /api/v1/user/devices
@@ -112,7 +142,7 @@ $ http GET /api/v1/user/devices/${UDID}/active
 }
 ```
 
-### 获取设备信息
+### 获取用户设备信息(包含source字段)
 
 **GET** /api/v1/user/devices/${UDID}
 
