@@ -10,7 +10,7 @@ from tornado.ioloop import IOLoop
 from tornado.web import authenticated, HTTPError
 from tornado.escape import json_decode
 
-from ..database import db, time_now
+from ..database import db, time_now, r
 from ..libs import jsondate
 
 from typing import Dict, Union, Optional
@@ -60,13 +60,19 @@ class CurrentUserMixin(object):
             "username": username
         })
         if ret['inserted']:
+            now = time_now()
             await db.table("users").save(
                 {
                     "secretKey": "S:" + str(uuid.uuid4()),
                     "token": str(uuid.uuid4()).replace("-", ""),
-                    "createdAt": time_now(),
-                    "lastLoggedInAt": time_now(),
+                    "createdAt": now,
+                    "lastLoggedInAt": now,
                 }, ret['id'])
+            user_count = await db.table("users").filter(r.row["createdAt"].le(now)).count()
+            if user_count == 1:
+                # set first user as admin
+                await db.table("users").save(dict(admin=True), ret['id'])
+
         elif ret['unchanged']:
             await db.table("users").save({
                 "lastLoggedInAt": time_now(),

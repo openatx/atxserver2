@@ -38,7 +38,8 @@
             <label>Token</label>
             <input class="form-control form-control-sm" :value="token">
         </div>
-        <h4>接口使用方法 <small>HTTPie</small></h4>
+        <h4>接口使用方法
+            <a target="_blank" href="https://httpie.org/"><small>HTTPie</small></a></h4>
         <p>
             <code>http GET http://localhost:4000/api/v1/user Authorization:'Bearer <span v-text="token"></span>'</code>
         </p>
