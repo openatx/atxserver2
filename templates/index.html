@@ -310,9 +310,14 @@
                     let scheme = location.protocol === 'https' ? 'wss' : 'ws';
                     let wsURL = scheme + "://" + location.host + "/websocket/devicechanges";
                     let ws = new WebSocket(wsURL);
+                    let refreshKey = null;
                     ws.onopen = (evt) => {
                         console.log("Websocket Connected")
+                        refreshKey = setInterval(() => {
+                            ws.send("ping")
+                        }, 5000)
                     }
+
                     ws.onmessage = (evt) => {
                         let m = JSON.parse(evt.data);
                         let isUpdate = this.devices.some((v) => {
@@ -333,6 +338,7 @@
                     ws.onclose = (evt) => {
                         console.log("Websocket closed")
                         this.websocketDisconnected = true
+                        clearInterval(refreshKey)
                     }
                 }
             })

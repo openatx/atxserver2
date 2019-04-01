@@ -257,28 +257,31 @@ class DeviceListHandler(AuthRequestHandler):
 
 
 class DeviceChangesWSHandler(BaseWebSocketHandler):
-    def write_json(self, data):
-        # self.ws_connection.write_message(jsondate.dumps(data))
-        try:
-            self.write_message(jsondate.dumps(data))
-        except tornado.websocket.WebSocketClosedError:
-            self.__opened = False
+    async def write_json(self, data: dict):
+        await self.write_message(jsondate.dumps(data))
+        # try:
+        #     self.write_message(jsondate.dumps(data))
+        # except tornado.websocket.WebSocketClosedError:
+        #     self.__opened = False
 
-    async def open(self):
-        self.__opened = True
+    async def send_feed(self):
         conn, feed = await db.table_devices.watch()
         with conn:
             while await feed.fetch_next():
                 if not self.__opened:
                     break
                 data = await feed.next()
-                self.write_json({
+                await self.write_json({
                     "event": "insert" if data['old_val'] is None else 'update',
                     "data": data['new_val'],
                 })  # yapf: disable
 
+    async def open(self):
+        self.__opened = True
+        IOLoop.current().add_callback(self.send_feed)
+
     def on_message(self, msg):
-        logger.debug("receive message %s", msg)
+        # logger.debug("receive message %s", msg)
         pass
 
     def on_close(self):
