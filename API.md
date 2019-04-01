@@ -130,7 +130,7 @@ $ http POST $SERVER_URL/api/v1/user/devices <<< '{"udid": "xx...xxxx"}'
 }
 ```
 
-这里有意思的是，你还可以传`email`将设备占用人指定为其他人(虽然可能有点安全问题)。
+如果你是管理员，你还可以传`email`将设备占用人指定为其他人。
 
 ```json
 {

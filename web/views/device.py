@@ -3,15 +3,15 @@
 
 import datetime
 import json
+from typing import Union
 
 import tornado.websocket
 from logzero import logger
+from rethinkdb import r
 from tornado import gen
 from tornado.httpclient import AsyncHTTPClient, HTTPRequest
 from tornado.ioloop import IOLoop
-from tornado.web import authenticated
-
-from rethinkdb import r
+from tornado.web import HTTPError, authenticated
 
 from ..database import db, time_now
 from ..libs import jsondate
@@ -115,7 +115,8 @@ class APIUserDeviceHandler(AuthRequestHandler):
                 "description": "device not found " + udid,
             })
             return
-        if data.get('userId') != self.current_user.email:
+        if not self.current_user.admin and \
+                data.get('userId') != self.current_user.email:
             self.set_status(403)
             self.write_json({
                 "success": False,
@@ -159,11 +160,16 @@ class APIUserDeviceHandler(AuthRequestHandler):
         data = self.get_payload()
         udid = data["udid"]
         idle_timeout = data.get('idleTimeout', 600)  # 默认10分钟
-        email = data.get(
-            'email', self.current_user.email)  # TODO(ssx): force change email
+        email = self.current_user.email
+        if data.get("email"):
+            if not self.current_user.admin:
+                raise HTTPError(403)
+            email = data.get('email')
+
         if email != self.current_user.email:
             logger.info("Device %s if acquired by %s for %s", udid,
                         self.current_user.email, email)
+
         try:
             await D(udid).acquire(email, idle_timeout)
             self.write_json({
@@ -180,7 +186,8 @@ class APIUserDeviceHandler(AuthRequestHandler):
     async def delete(self, udid: str):
         """ release device """
         try:
-            await D(udid).release(self.current_user.email)
+            email = "" if self.current_user.admin else self.current_user.email
+            await D(udid).release(email)
             self.write_json({
                 "success": True,
                 "description": "Device successfully released"
@@ -368,15 +375,17 @@ class D(object):
         # 等待进入下一次检查
         IOLoop.current().add_callback(self._check, began_at, left_seconds + 3)
 
-    async def release(self, email: str):
+    async def release(self, email: Union[str, None]):
         """
+        Admin can provider empty email
+
         Raises:
             ReleaseError
         """
         device = await db.table("devices").get(self.udid).run()
         if not device:
             raise ReleaseError("device not exist")
-        if device.get('userId') != email:
+        if email and device.get('userId') != email:
             raise ReleaseError("device is not owned by you")
         # 设备先要冷却一下(Provider清理并检查设备)
         await self.update({"using": False, "userId": None, "colding": True})

@@ -10,14 +10,16 @@ from .views.device import (
     AndroidDeviceControlHandler, AppleDeviceListHandler, APIDeviceHandler)
 from .views.provider import ProviderHeartbeatWSHandler
 from .views.upload import UploadItemHandler, UploadListHandler
-from .views.user import (UserHandler, UserGroupCreateHandler,
-                         APIUserGroupHandler, APIUserHandler, APIUserSettingsHandler)
+from .views.user import (UserHandler, UserGroupCreateHandler, AdminListHandler,
+                         APIAdminListHandler, APIUserGroupHandler,
+                         APIUserHandler, APIUserSettingsHandler)
 from .views.base import make_redirect_handler
 
 
 urlpatterns = [
     (r"/", MainHandler),
     (r"/user", UserHandler),
+    (r"/admin", AdminListHandler),
     (r"/user/group_create", UserGroupCreateHandler),
     (r"/logout", LogoutHandler),
     (r"/uploads", UploadListHandler),
@@ -42,6 +44,7 @@ urlpatterns = [
     (r"/api/v1/user/devices/([^/]+)/active", APIUserDeviceActiveHandler), # GET
     (r"/api/v1/user/groups", APIUserGroupHandler), # GET, POST
     (r"/api/v1/user/settings", APIUserSettingsHandler), # GET, PUT
+    (r"/api/v1/admins", APIAdminListHandler),
     # GET /api/v1/devices
     # POST /api/v1/user/devices/{serial}/remoteConnect
     # DELETE /api/v1/user/devices/{serial}/remoteConnect

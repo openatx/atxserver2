@@ -5,7 +5,7 @@ from tornado.web import authenticated
 from rethinkdb import r
 
 from ..database import db, time_now
-from .base import AuthRequestHandler
+from .base import AuthRequestHandler, AdminRequestHandler
 
 
 class UserHandler(AuthRequestHandler):
@@ -13,19 +13,51 @@ class UserHandler(AuthRequestHandler):
         self.render("user.html")
 
 
+class AdminListHandler(AdminRequestHandler):
+    def get(self):
+        self.render("admin.html")
+
+
+class APIAdminListHandler(AdminRequestHandler):
+    async def get(self):
+        """
+        Response example:
+        {
+            "success": true,
+            "users": [{
+                "email": "xxxxx@yyyyy",
+                "admin": true,
+                ...
+            }]
+        }
+        """
+        users = await db.table("users").filter({"admin": True}).all()
+        self.write_json({
+            "success": True,
+            "users": users,
+        })
+
+    async def post(self):
+        payload = self.get_payload()
+        ret = await db.table("users").get(payload["email"]).update(
+            {"admin": True})
+        self.write_json({
+            "success": True,
+            "data": ret,
+        })
+
+
 class APIUserHandler(AuthRequestHandler):
     async def get(self):
         """
-        Return:
-            dict
-        
-        For example
+        Response example
         {
             "createdAt": "2019-02-18T11:06:53.621000+08:00",
             "email": "fa@anonymous.com",
             "lastLoggedInAt": "2019-02-21T20:31:29.639000+08:00",
             "secretKey": "S:15cc65f5-3eeb-4fec-8131-355ad03653d4",
             "username": "fa",
+            "admin": false,
             "groups": [
                 {
                     "auth": {

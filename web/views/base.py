@@ -7,15 +7,19 @@ import tornado.web
 import tornado.websocket
 from bunch import Bunch
 from tornado.ioloop import IOLoop
-from tornado.web import authenticated
+from tornado.web import authenticated, HTTPError
 from tornado.escape import json_decode
 
 from ..database import db, time_now
 from ..libs import jsondate
 
+from typing import Dict, Union, Optional
+
 
 class CurrentUserMixin(object):
-    def bunchify(self, d: dict):
+    def bunchify(self, d: Union[dict, None]):
+        if isinstance(d, dict):
+            d['admin'] = d.get('admin', False)
         return Bunch(d) if d else None
 
     @property
@@ -108,6 +112,15 @@ class AuthRequestHandler(BaseRequestHandler):
     async def prepare(self):
         await super().prepare()
         authenticated(lambda x: None)(self)
+
+
+class AdminRequestHandler(AuthRequestHandler):
+    """ admin required """
+
+    async def prepare(self):
+        await super().prepare()
+        if not self.current_user.get("admin"):
+            raise HTTPError(403)
 
 
 class BaseWebSocketHandler(CurrentUserMixin,

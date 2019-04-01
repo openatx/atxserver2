@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% block title %}用户详情{% end %}
+
+{% block script %}
+{% end %}
+{% block style %}
+{% end %}
+
+
+{% block content %}
+<div class="container">
+    <div style="margin: 10px 0px">
+        接口 <a href="/api/v1/admins">/api/v1/admins</a>
+    </div>
+    <div>
+        <form class="form-inline" @submit.prevent="addAdmin">
+            <div class="form-group">
+                <label style="margin-right: 1em">用户邮箱</label>
+                <input style="margin-right: 1em" v-model="formEmail" placeholder="email ..." class="form-control">
+                <button class="btn btn-success">新增管理员</button>
+            </div>
+        </form>
+        <br>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>邮箱</th>
+                    <th>用户名</th>
+                    <th>上次登录时间</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr v-for="u in users">
+                    <td v-text="u.email"></td>
+                    <td v-text="u.username"></td>
+                    <td v-text="u.lastLoggedInAt"></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+{% end %}
+
+{% block script %}
+<script>
+    $.getJSON("/api/v1/admins")
+        .then((ret) => {
+            new Vue({
+                el: "#app",
+                data: Object.assign({
+                    formEmail: "",
+                    users: [],
+                    token: "",
+                }, ret),
+                methods: {
+                    addAdmin() {
+                        $.ajax({
+                            url: "/api/v1/admins",
+                            method: "post",
+                            data: JSON.stringify({
+                                email: this.formEmail,
+                            })
+                        }).then(ret => {
+                            console.log(ret)
+                            this.$message("添加成功")
+                        })
+                    }
+                }
+            })
+        })
+</script>
+{% end %}
