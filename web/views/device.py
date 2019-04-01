@@ -15,6 +15,7 @@ from rethinkdb import r
 
 from ..database import db, time_now
 from ..libs import jsondate
+from ..version import __version__
 from .base import (AuthRequestHandler, BaseRequestHandler,
                    BaseWebSocketHandler, CorsMixin)
 
@@ -253,7 +254,7 @@ class DeviceListHandler(AuthRequestHandler):
 
     async def get(self):
         """ get data from database """
-        self.render("index.html")
+        self.render("index.html", version=__version__)
 
 
 class DeviceChangesWSHandler(BaseWebSocketHandler):

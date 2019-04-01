@@ -25,6 +25,10 @@
 </style>
 {% end %}
 
+{% block navlinks %}
+<span class="navbar-text" style="padding-left: 1em">V{{version}}</span>
+{% end %}
+
 {% block content %}
 <div class="container">
     <span onclick="location.reload()">
