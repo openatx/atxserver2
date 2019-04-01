@@ -1,19 +1,22 @@
 # coding: utf-8
 #
 
-import json
 import datetime
+import json
+
+import tornado.websocket
+from logzero import logger
+from tornado import gen
+from tornado.httpclient import AsyncHTTPClient, HTTPRequest
+from tornado.ioloop import IOLoop
+from tornado.web import authenticated
 
 from rethinkdb import r
-from logzero import logger
-from tornado.web import authenticated
-from tornado.ioloop import IOLoop
-from tornado.httpclient import AsyncHTTPClient, HTTPRequest
-from tornado import gen
 
 from ..database import db, time_now
 from ..libs import jsondate
-from .base import AuthRequestHandler, BaseWebSocketHandler, BaseRequestHandler, CorsMixin
+from .base import (AuthRequestHandler, BaseRequestHandler,
+                   BaseWebSocketHandler, CorsMixin)
 
 
 class AcquireError(Exception):
@@ -155,8 +158,13 @@ class APIUserDeviceHandler(AuthRequestHandler):
         data = self.get_payload()
         udid = data["udid"]
         idle_timeout = data.get('idleTimeout', 600)  # 默认10分钟
+        email = data.get(
+            'email', self.current_user.email)  # TODO(ssx): force change email
+        if email != self.current_user.email:
+            logger.info("Device %s if acquired by %s for %s", udid,
+                        self.current_user.email, email)
         try:
-            await D(udid).acquire(self.current_user.email, idle_timeout)
+            await D(udid).acquire(email, idle_timeout)
             self.write_json({
                 "success": True,
                 "description": "Device successfully added"
@@ -251,7 +259,10 @@ class DeviceListHandler(AuthRequestHandler):
 class DeviceChangesWSHandler(BaseWebSocketHandler):
     def write_json(self, data):
         # self.ws_connection.write_message(jsondate.dumps(data))
-        self.write_message(jsondate.dumps(data))
+        try:
+            self.write_message(jsondate.dumps(data))
+        except tornado.websocket.WebSocketClosedError:
+            self.__opened = False
 
     async def open(self):
         self.__opened = True
