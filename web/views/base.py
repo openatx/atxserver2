@@ -68,7 +68,7 @@ class CurrentUserMixin(object):
                     "createdAt": now,
                     "lastLoggedInAt": now,
                 }, ret['id'])
-            user_count = await db.table("users").filter(r.row["createdAt"].le(now)).count()
+            user_count = await db.table("users").filter({"admin": True}).filter(r.row["createdAt"].le(now)).count() # yapf: disable
             if user_count == 1:
                 # set first user as admin
                 await db.table("users").save(dict(admin=True), ret['id'])

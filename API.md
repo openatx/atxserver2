@@ -246,7 +246,8 @@ Server: TornadoServer/4.5.3
 **POST** $PROVIDER_URL/app/install?udid=xxxx
 
 ```bash
-$ http --form POST $PROVIDER_URL/app/install?udid=xxxx url==http://example.com/some.apk
+$ http --form POST $PROVIDER_URL/app/install?udid=xxxx url==http://example.com/some.apk launch==true
+# launch是可选参数，代表是否安装成功后启动应用
 # 成功返回 200
 {
     "success": true

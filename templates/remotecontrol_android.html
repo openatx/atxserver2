@@ -366,7 +366,7 @@
             <input type="text" class="form-control form-control-sm" placeholder="http://..." v-model="app.installUrl">
           </div>
           <div>
-            <el-checkbox :value="true" disabled>安装前卸载同包名应用</el-checkbox>
+            <el-checkbox v-model="app.launch">安装完成后启动应用</el-checkbox>
           </div>
           <button class="btn btn-outline-primary btn-sm" @click="appInstall"
             :disabled="!app.finished || !app.installUrl">安裝</button>
@@ -436,6 +436,7 @@
             finished: true,
             packageName: "",
             message: "",
+            launch: true,
           },
           userSettings: Object.assign({
             inputName: '',
@@ -469,6 +470,7 @@
               url: this.source.url + "/app/install?udid=" + this.udid,
               data: {
                 url: this.app.installUrl,
+                launch: this.app.launch,
                 secret: this.source.secret,
               }
             }).done(ret => {

@@ -65,8 +65,11 @@
                     <el-button disabled size="mini" type="primary">冷却中</span>
                 </template>
                 <template v-else-if='"busy" == scope.row.status'>
-                    <el-button :title="scope.row.userId" disabled size="mini" type="warning">
-                        <i class="fas fa-lock color-yellow" v-show="scope.row.private"></i> 已被占用
+                    <el-button :title="scope.row.userId" style="cursor: not-allowed; background: #f3d19e" size="mini"
+                        type="warning">
+                        <span @dblclick.alt="deviceRelease(scope.row.udid)">
+                            <i class="fas fa-lock color-yellow" v-show="scope.row.private"></i> 已被占用
+                        </span>
                     </el-button>
                 </template>
                 <template v-else-if='"stop using" == scope.row.status'>
@@ -77,7 +80,6 @@
                         <el-button size="mini">
                             <!-- <i class="fas fa-lock color-yellow"></i> -->
                             <!-- <i class="fas fa-unlock"></i> -->
-
                             <span style="color: blue">点击使用</span>
                         </el-button>
                     </a>

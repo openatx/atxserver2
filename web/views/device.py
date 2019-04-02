@@ -3,6 +3,7 @@
 
 import datetime
 import json
+import urllib
 from typing import Union
 
 import tornado.websocket
@@ -400,8 +401,8 @@ class D(object):
             if not source.get('url'):
                 await self.update({"colding": False})
             else:
-                url = source['url'] + "/devices/" + device[
-                    'udid'] + "/cold?secret=" + secret
+                url = source['url'] + "/cold?" + urllib.parse.urlencode(
+                    dict(udid=device['udid'], secret=secret))
                 request = HTTPRequest(url, method="POST", body='')
                 await http_client.fetch(request)
 

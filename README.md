@@ -90,6 +90,16 @@ docker run -it --rm --privileged -v /dev/bus/usb:/dev/bus/usb --net host \
 
 参考项目介绍 [atxserver2-ios-provider](https://github.com/openatx/atxserver2-ios-provider)
 
+## 管理员功能
+默认第一个登录的用户会成为管理员
+
+管理员有哪些特权呢？
+
+1. 可以释放他人正在使用的设备。（按住ALT，然后双击`正在使用`按钮）
+2. 使用他人的身份占用设备（参考API文档）
+3. 获取设备的source信息（参考API文档）
+4. 将他人设置为管理员，导航栏可以看到`后台管理`链接
+
 ## 操作指南
 鼠标操作
 
