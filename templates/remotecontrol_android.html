@@ -477,7 +477,11 @@
               this.app.message = ret.output;
               this.app.packageName = ret.packageName;
             }).fail(err => {
-              this.app.message = err.responseJSON.description;
+              if (err.status == 400) {
+                this.app.message = err.responseJSON.description;
+              } else {
+                this.app.message = err.responseText;
+              }
             }).always(() => {
               this.app.finished = true
             })
