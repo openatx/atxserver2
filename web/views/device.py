@@ -4,8 +4,10 @@
 import datetime
 import json
 import urllib
+from functools import wraps
 from typing import Union
 
+import rethinkdb as rdb
 import tornado.websocket
 from logzero import logger
 from rethinkdb import r
@@ -86,22 +88,57 @@ class APIUserDeviceActiveHandler(AuthRequestHandler):
             })
 
 
+def catch_error_wraps(*errors):
+    """ write 400 if error raises """
+
+    def decorator(fn):
+        @wraps(fn)
+        async def inner(self, *args, **kwargs):
+            try:
+                print(errors)
+                return await fn(self, *args, **kwargs)
+            except errors as e:
+                self.set_status(400)  # bad request
+                self.write_json({
+                    "success": False,
+                    "description": "error: %s" % e,
+                })
+
+        return inner
+
+    return decorator
+
+
 class APIDeviceHandler(CorsMixin, BaseRequestHandler):
+    @catch_error_wraps(rdb.errors.ReqlNonExistenceError)
     async def get(self, udid):
-        try:
-            data = await db.table("devices").get(udid).without("sources").run()
-            self.write_json({
-                "success": True,
-                "device": data,
-            })
-        except r.errors.ReqlNonExistenceError:
-            # without on non-object will raise error
-            self.set_status(400)  # bad request
-            self.write_json({
-                "success": False,
-                "description": "device not found %s" % udid,
-            })
-            return
+        data = await db.table("devices").get(udid).without("sources").run()
+        self.write_json({
+            "success": True,
+            "device": data,
+        })
+
+
+class APIDevicePropertiesHandler(CorsMixin, BaseRequestHandler):
+    @catch_error_wraps(rdb.errors.ReqlNonExistenceError)
+    async def get(self, udid):
+        data = await db.table("devices").get(udid).pluck("udid",
+                                                         "properties").run()
+        self.write_json({
+            "success": True,
+            "data": data,
+        })
+
+    @catch_error_wraps(rdb.errors.ReqlNonExistenceError, RuntimeError)
+    async def put(self, udid):
+        if not self.current_user.admin:
+            raise RuntimeError("Update property requires admin")
+
+        props = self.get_payload()
+        await db.table("devices").get(udid).update({
+            "properties": props,
+        })
+        self.write_json({"success": True, "description": "Propery updated"})
 
 
 class APIUserDeviceHandler(AuthRequestHandler):
@@ -162,6 +199,8 @@ class APIUserDeviceHandler(AuthRequestHandler):
         udid = data["udid"]
         idle_timeout = data.get('idleTimeout', 600)  # 默认10分钟
         email = self.current_user.email
+
+        # Admin: change user email
         if data.get("email"):
             if not self.current_user.admin:
                 raise HTTPError(403)

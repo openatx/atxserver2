@@ -46,6 +46,9 @@ python3 main.py --auth openid # 网易内部使用
 
 # 设置监听端口
 python3 main.py --port 4000 # 默认监听的就是这个地址
+
+# 默认支持运行在Nginx下，支持 X-Real-Ip/X-Forwarded-For
+# 如果不需要可以通过 --no-xheaders 关闭该功能
 ```
 
 通过环境变量的修改，可以更改RethinkDB的连接地址
@@ -99,6 +102,7 @@ docker run -it --rm --privileged -v /dev/bus/usb:/dev/bus/usb --net host \
 2. 使用他人的身份占用设备（参考API文档）
 3. 获取设备的source信息（参考API文档）
 4. 将他人设置为管理员，导航栏可以看到`后台管理`链接
+5. 有权修改`资产编号`字段
 
 ## 操作指南
 鼠标操作

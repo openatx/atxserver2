@@ -62,7 +62,7 @@
                     <el-button size="mini" disabled>设备离线</el-button>
                 </template>
                 <template v-else-if='"colding" == scope.row.status'>
-                    <el-button disabled size="mini" type="primary">冷却中</span>
+                    <el-button disabled :loading="true" size="mini" type="primary">释放中</span>
                 </template>
                 <template v-else-if='"busy" == scope.row.status'>
                     <el-button :title="scope.row.userId" style="cursor: not-allowed; background: #f3d19e" size="mini"
@@ -91,7 +91,10 @@
         <el-table-column label="资产编号">
             <template slot-scope="scope">
                 <!-- <el-input size="mini"></el-input> -->
-                <span v-text="prop_propertyId"></span> <i class="fas fa-edit cursor-pointer"></i>
+                <atx-edit-inline :readonly="!user.admin" :value="scope.row.prop_propertyId"
+                    @change="updatePropertyId(scope.row.udid, $event)">
+                </atx-edit-inline>
+                <!-- <span v-text="prop_propertyId"></span> <i class="fas fa-edit cursor-pointer"></i> -->
             </template>
         </el-table-column>
         <el-table-column label="设备编号">
@@ -118,6 +121,8 @@
 <script>
     const currentUserEmail = "{{ current_user.email }}";
     const currentUserName = "{{ current_user.username }}"
+    const admin = "{{current_user.admin}}" == "True" // Python true is "True"
+    console.log(admin)
 </script>
 <script>
     $.getJSON("/api/v1/devices?present=true")
@@ -129,6 +134,7 @@
                     user: {
                         name: currentUserName,
                         email: currentUserEmail,
+                        admin: admin,
                     },
                     devices: [],
                     counts: {
@@ -143,9 +149,6 @@
                         }
                     }
                 }, { "devices": ret.devices }),
-                mounted() {
-                    console.log("Mounted:", this.devices)
-                },
                 computed: {
                     tableData() {
                         let devices = this.orderedDevices.map(v => {
@@ -186,6 +189,7 @@
                         })
                         return devices;
 
+                        // Only for reference
                         return [{
                             udid: "kjnl-dfljsasdklifjdklsfjlasdflsdfk",
                             platform: "android",
@@ -230,9 +234,31 @@
                     },
                     fromNow(value) {
                         return moment(value).fromNow();
+                    },
+                    shortString(value) {
+                        if (value.length > 16) {
+                            return value.slice(0, 15) + "..."
+                        }
+                        return value;
                     }
                 },
                 methods: {
+                    updatePropertyId(udid, text) { // admin required
+                        $.ajax({
+                            url: "/api/v1/devices/" + udid + "/properties",
+                            method: "put",
+                            contentType: "application/json",
+                            data: JSON.stringify({
+                                "propertyId": text,
+                            })
+                        }).fail(ret => {
+                            if (ret.status == 400) {
+                                this.$message.error(ret.responseJSON.description)
+                            } else {
+                                this.$message.error(ret.responseText)
+                            }
+                        })
+                    },
                     formatTimeUsed() {
                         // let duration = moment(this.finishedAt) - moment(this.createdAt);
                         // return moment.utc(duration).format('HH:mm:ss')
@@ -304,12 +330,44 @@
                         console.log(device.udid)
                     }
                 },
-                filters: {
-                    shortString(value) {
-                        if (value.length > 16) {
-                            return value.slice(0, 15) + "..."
-                        }
-                        return value;
+                components: {
+                    "atx-edit-inline": {
+                        props: {
+                            value: String,
+                            readonly: Boolean,
+                        },
+                        data: function () {
+                            return {
+                                edit: false,
+                                editValue: "",
+                            }
+                        },
+                        methods: {
+                            update() {
+                                this.$emit("change", this.editValue);
+                            },
+                            onEdit() {
+                                this.edit = true
+                                this.editValue = this.value;
+                                this.$nextTick(() => {
+                                    this.$refs.input.focus()
+                                })
+                            }
+                        },
+                        template: `
+                        <div>
+                            <form v-if="edit" class="input-group input-group-sm" @submit.prevent="update">
+                                <input ref="input" class="form-control" v-model="editValue">
+                                <div class="input-group-append">
+                                    <button @click="edit=!edit" class="btn btn-outline-secondary">
+                                        <i class="fas fa-save"></i>
+                                    </button>
+                                </div>
+                            </form>
+                            <div v-else>
+                                {{!value}} <i v-if="!readonly" @click="onEdit" class="fas fa-edit cursor-pointer"></i>
+                            </div>
+                        </div>`
                     }
                 },
                 mounted() {

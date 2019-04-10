@@ -5,13 +5,14 @@ import argparse
 import socket
 from pprint import pprint
 
-from rethinkdb import r
 import tornado.ioloop
 from logzero import logger
+from rethinkdb import r
+from tornado.httpserver import HTTPServer
 from tornado.log import enable_pretty_logging
 
-from web.entry import make_app
 from web.database import db
+from web.entry import make_app
 from web.views import OpenIdLoginHandler, SimpleLoginHandler
 
 
@@ -40,6 +41,7 @@ def main():
                         help='open debug log, and open hot reload')
     parser.add_argument('--auth', type=str, default='simple',
                         choices=_auth_handlers.keys(), help='authentication method')
+    parser.add_argument("--no-xheaders", action="store_true", help="disable support for X-Real-Ip/X-Forwarded-For")
     parser.add_argument(
         '--auth-conf-file', type=argparse.FileType('r'), help='authentication config file')
     # yapf: enable
@@ -63,7 +65,8 @@ def main():
 
     login_handler = _auth_handlers[args.auth]
     app = make_app(login_handler, debug=args.debug)
-    app.listen(args.port)
+    server = HTTPServer(app, xheaders=not args.no_xheaders)
+    server.listen(args.port)
     logger.info("listen on port http://%s:%d", machine_ip(), args.port)
     try:
         ioloop.start()
