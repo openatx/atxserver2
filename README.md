@@ -31,6 +31,7 @@ docker-compose up
 
 ```bash
 pip3 install -r requirements.txt
+pip3 install -r requirements-dev.txt  # include the new rethinkdb
 ```
 
 最简单的启动方法 （默认连接的rethinkdb地址 `localhost:28015`)
