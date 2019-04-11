@@ -75,6 +75,10 @@ class ProviderHeartbeatWSHandler(BaseWebSocketHandler):
         self._id = req['id'] = str(uuid.uuid1())
         self._owner = req.get('owner', "")
         self._info = req
+
+        # hotfix for old provider
+        if self._owner == "nobody@nobody.io":
+            self._owner = ""
         self.write_message("you are online " + req['name'] + " ID:" + self._id)
 
     async def _on_update(self, req):
