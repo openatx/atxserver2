@@ -88,7 +88,7 @@
         </el-table-column>
         <!-- <el-table-column prop="platform" label="类型"></el-table-column> -->
         <el-table-column label="设备名" prop="prop_name"></el-table-column>
-        <el-table-column prop="prop_propertyId" sortable label="资产编号">
+        <el-table-column sort-by="prop_serial" sortable label="资产编号">
             <template slot-scope="scope">
                 <!-- <el-input size="mini"></el-input> -->
                 <atx-edit-inline :readonly="!user.admin" :value="scope.row.prop_propertyId"
@@ -112,8 +112,8 @@
             </template>
         </el-table-column>
         <!-- <el-table-column prop="prop_brand" label="品牌"></el-table-column> -->
-        <el-table-column prop="prop_version" sortable label="Version"></el-table-column>
-        <el-table-column prop="usingDuration" sortable label="使用时长">
+        <el-table-column prop="prop_version" sortable :sort-method="semverCompare" label="Version"></el-table-column>
+        <el-table-column sortable sort-by="usingDuration" label="使用时长">
             <template slot-scope="scope">
                 {{!scope.row.usingDuration | formatDuration}}
             </template>
@@ -241,7 +241,6 @@
                         return moment(value).fromNow();
                     },
                     formatDuration(value) {
-                        console.log(value)
                         let duration = moment.duration(value, "seconds")
                         return moment.utc(duration.asMilliseconds()).format("HH:mm:ss")
                     },
@@ -253,6 +252,24 @@
                     }
                 },
                 methods: {
+                    semverCompare(a, b) {
+                        function cmp(as, bs, i, j) {
+                            let va = as[i], vb = bs[j];
+                            if (va == null || vb == null) {
+                                if (va == null && vb == null) {
+                                    return 0
+                                }
+                                return va == null ? -1 : 1;
+                            }
+                            if (va == vb) {
+                                return cmp(as, bs, i + 1, j + 1)
+                            }
+                            return va - vb > 0 ? 1 : -1
+                        }
+
+                        let as = a.prop_version.split("."), bs = b.prop_version.split(".");
+                        return cmp(as, bs, 0, 0)
+                    },
                     updatePropertyId(udid, text) { // admin required
                         $.ajax({
                             url: "/api/v1/devices/" + udid + "/properties",
@@ -292,9 +309,6 @@
                             url: "/api/v1/user/devices/" + udid,
                             dataType: "json",
                         })
-                            .then(ret => {
-                                console.log(ret)
-                            })
                     },
                     deviceConvert(device) {
                         if (!device.present) {
