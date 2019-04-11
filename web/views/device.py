@@ -141,7 +141,7 @@ class APIDevicePropertiesHandler(CorsMixin, BaseRequestHandler):
         self.write_json({"success": True, "description": "Propery updated"})
 
 
-class APIUserDeviceHandler(AuthRequestHandler):
+class APIUserDeviceHandler(CorsMixin, AuthRequestHandler):
     """ device Acquire and Release """
 
     async def get_device(self, udid):

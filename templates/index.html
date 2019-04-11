@@ -345,6 +345,7 @@
                         methods: {
                             update() {
                                 this.$emit("change", this.editValue);
+                                this.edit = false
                             },
                             onEdit() {
                                 this.edit = true
@@ -356,10 +357,10 @@
                         },
                         template: `
                         <div>
-                            <form v-if="edit" class="input-group input-group-sm" @submit.prevent="update">
-                                <input ref="input" class="form-control" v-model="editValue">
+                            <form  v-if="edit" class="input-group input-group-sm" @submit.prevent="update">
+                                <input @keyup.esc="edit=false" ref="input" class="form-control" v-model="editValue">
                                 <div class="input-group-append">
-                                    <button @click="edit=!edit" class="btn btn-outline-secondary">
+                                    <button type="submit" class="btn btn-outline-secondary">
                                         <i class="fas fa-save"></i>
                                     </button>
                                 </div>
