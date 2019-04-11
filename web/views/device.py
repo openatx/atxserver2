@@ -33,8 +33,8 @@ class ReleaseError(Exception):
 
 class APIDeviceListHandler(CorsMixin, BaseRequestHandler):
     async def get(self):
-        reql = db.table_devices.without("sources", "source").order_by(
-            r.desc("createdAt"))
+        reql = db.table_devices.without("sources",
+                                        "source").order_by(r.desc("createdAt"))
         if self.get_argument("platform", ""):
             reql = reql.filter({"platform": self.get_argument("platform")})
         if self.get_argument("usable", None):  # 只查找能用的设备
@@ -427,8 +427,16 @@ class D(object):
             raise ReleaseError("device not exist")
         if email and device.get('userId') != email:
             raise ReleaseError("device is not owned by you")
+
+        # Update database
+        await self.update({
+            "using": False,
+            "userId": None,
+            "colding": True,
+            "usingDuration": r.row["usingDuration"].default(0).add(r.now().sub(r.row["usingBeganAt"]))
+        }) # yapf: disable
+
         # 设备先要冷却一下(Provider清理并检查设备)
-        await self.update({"using": False, "userId": None, "colding": True})
         source = device2source(device)
         if not source:  # 设备离线了
             return

@@ -88,7 +88,7 @@
         </el-table-column>
         <!-- <el-table-column prop="platform" label="类型"></el-table-column> -->
         <el-table-column label="设备名" prop="prop_name"></el-table-column>
-        <el-table-column label="资产编号">
+        <el-table-column prop="prop_propertyId" sortable label="资产编号">
             <template slot-scope="scope">
                 <!-- <el-input size="mini"></el-input> -->
                 <atx-edit-inline :readonly="!user.admin" :value="scope.row.prop_propertyId"
@@ -111,8 +111,13 @@
                 </template>
             </template>
         </el-table-column>
-        <el-table-column prop="prop_brand" label="品牌"></el-table-column>
-        <el-table-column prop="prop_version" label="Version"></el-table-column>
+        <!-- <el-table-column prop="prop_brand" label="品牌"></el-table-column> -->
+        <el-table-column prop="prop_version" sortable label="Version"></el-table-column>
+        <el-table-column prop="usingDuration" sortable label="使用时长">
+            <template slot-scope="scope">
+                {{!scope.row.usingDuration | formatDuration}}
+            </template>
+        </el-table-column>
     </el-table>
 </div>
 {% end %}
@@ -234,6 +239,11 @@
                     },
                     fromNow(value) {
                         return moment(value).fromNow();
+                    },
+                    formatDuration(value) {
+                        console.log(value)
+                        let duration = moment.duration(value, "seconds")
+                        return moment.utc(duration.asMilliseconds()).format("HH:mm:ss")
                     },
                     shortString(value) {
                         if (value.length > 16) {
