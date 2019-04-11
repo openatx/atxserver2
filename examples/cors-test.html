@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+</head>
+
+<body>
+    <h1>Hello CORS</h1>
+    <script src="https://cdn.jsdelivr.net/npm/jquery/dist/jquery.min.js"></script>
+    <script>
+        console.log("Hello")
+        $.ajax({
+            url: "http://localhost:4000/api/v1/user/devices/6EB0217704000486",
+            method: "get",
+            beforeSend: function (xhr) {
+                xhr.setRequestHeader("Authorization", "Bearer 3460b7a59def4bfa926a9b643504b8b7")
+            },
+        }).then(ret => {
+            console.log(ret)
+        })
+    </script>
+</body>
+
+</html>

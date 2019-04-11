@@ -116,6 +116,8 @@ class AuthRequestHandler(BaseRequestHandler):
     """ request user logged in before http request """
 
     async def prepare(self):
+        if self.request.method == "OPTIONS":  # CORS
+            return
         await super().prepare()
         authenticated(lambda x: None)(self)
 
@@ -151,7 +153,7 @@ class CorsMixin(object):
         self.set_header("Access-Control-Allow-Headers", self.CORS_HEADERS)
         self.set_header('Access-Control-Allow-Methods', self.CORS_METHODS)
 
-    def options(self):
+    def options(self, *args):
         # no body
         self.set_status(204)
         self.finish()
