@@ -428,6 +428,9 @@ class D(object):
         if email and device.get('userId') != email:
             raise ReleaseError("device is not owned by you")
 
+        if not device.get("using"):  # already released
+            return
+
         # Update database
         await self.update({
             "using": False,
