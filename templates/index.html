@@ -78,8 +78,10 @@
                 <template v-else>
                     <a :href='"/devices/"+scope.row.udid+"/remotecontrol"' target="_blank">
                         <el-button size="mini">
-                            <!-- <i class="fas fa-lock color-yellow"></i> -->
-                            <!-- <i class="fas fa-unlock"></i> -->
+                            <template v-if="!!scope.row.owner">
+                                <i v-if="scope.row.owner==user.email" class="fas fa-lock color-yellow"></i>
+                                <i v-else class="fas fa-user" :title="scope.row.owner"></i>
+                            </template>
                             <span style="color: blue">点击使用</span>
                         </el-button>
                     </a>

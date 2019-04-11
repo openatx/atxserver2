@@ -167,7 +167,7 @@
       </section>
       <!-- screen body -->
       <section class="screen debugarea d-flex grow-1 align-items-center justify-content-center flex-reset"
-        style="flex-basis: 0%; line-height: 0px" @dblclick="runKeyevent('WAKEUP')">
+        style="flex-basis: 0%; line-height: 0px" @dblclick="runKeyevent('WAKEUP'); hotfix()">
         <!-- <canvas ref="fgCanvas" class="canvas-fg" v-bind:style="canvasStyle"></canvas> -->
         <canvas ref="bgCanvas" class="canvas-bg" v-bind:style="canvasStyle"></canvas>
         <span class="finger finger-0" style="transform: translate3d(200px, 100px, 0px)"></span>
@@ -619,18 +619,18 @@
           },
           hotfix() {
             // 修复屏幕旋转问题
-            this.$notify({
-              message: "Hotfixing",
-              position: 'top-left',
-              duration: 1000,
-            })
+            // this.$notify({
+            //   message: "Hotfixing",
+            //   position: 'top-left',
+            //   duration: 1000,
+            // })
             $.ajax({
               method: "get",
               url: this.deviceUrl + "/info/rotation"
             }).done(ret => {
               this.$notify({
-                message: "Hotfix finished",
-                position: 'top-left',
+                message: "Rotation updated",
+                position: 'bottom-left',
                 duration: 1000,
               })
             })

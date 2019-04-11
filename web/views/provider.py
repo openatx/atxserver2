@@ -37,8 +37,8 @@ class ProviderHeartbeatWSHandler(BaseWebSocketHandler):
             logger.warning("device %s source is missing", udid)
 
     def initialize(self):
-        self._owner = None
         self._id = None
+        self._owner = None
         self._info = None
 
     def open(self):
@@ -68,11 +68,12 @@ class ProviderHeartbeatWSHandler(BaseWebSocketHandler):
         """
         assert "name" in req
         assert "url" in req
-        assert "owner" in req
         assert "secret" in req
         assert "priority" in req
+        # assert "owner" in req
 
         self._id = req['id'] = str(uuid.uuid1())
+        self._owner = req.get('owner', "")
         self._info = req
         self.write_message("you are online " + req['name'] + " ID:" + self._id)
 
@@ -94,6 +95,9 @@ class ProviderHeartbeatWSHandler(BaseWebSocketHandler):
         updates = req.copy()
         udid = updates['udid']
         assert isinstance(udid, str)
+
+        # add owner
+        updates['owner'] = self._owner
 
         source = updates.pop('provider', {})
         if source is None:
@@ -135,6 +139,7 @@ class ProviderHeartbeatWSHandler(BaseWebSocketHandler):
             filter_rule = r.row["sources"].default({}).keys().count().eq(0)
             await db.table("devices").filter(filter_rule).update({
                 "using": False,
+                "colding": False,
             }) # yapf: disable
 
         IOLoop.current().add_callback(remove_source)

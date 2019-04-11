@@ -33,8 +33,14 @@ class ReleaseError(Exception):
 
 class APIDeviceListHandler(CorsMixin, BaseRequestHandler):
     async def get(self):
-        reql = db.table_devices.without("sources",
-                                        "source").order_by(r.desc("createdAt"))
+        def filter_accessible(v):  # filter out private device
+            return r.expr([self.current_user.email,
+                           ""]).contains(v['owner'].default(""))
+
+        reql = db.table_devices.without("sources", "source")
+        if not self.current_user.admin:
+            reql = reql.filter(filter_accessible)
+
         if self.get_argument("platform", ""):
             reql = reql.filter({"platform": self.get_argument("platform")})
         if self.get_argument("usable", None):  # 只查找能用的设备
@@ -46,6 +52,8 @@ class APIDeviceListHandler(CorsMixin, BaseRequestHandler):
         if self.get_argument("present", None):
             reql = reql.filter(
                 {"present": self.get_argument("present") == "true"})
+
+        reql = reql.order_by(r.desc("createdAt"))
         devices = await reql.all()
 
         if self.get_argument("present", ""):
