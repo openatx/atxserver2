@@ -12,7 +12,7 @@ from .views.device import (DeviceChangesWSHandler, DeviceItemHandler,
 from .views.provider import ProviderHeartbeatWSHandler
 from .views.upload import UploadItemHandler, UploadListHandler
 from .views.user import (UserHandler, UserGroupCreateHandler, AdminListHandler,
-                         APIAdminListHandler, APIUserGroupHandler,
+                         APIAdminListHandler, APIUserGroupListHandler,
                          APIUserHandler, APIUserSettingsHandler)
 from .views.base import make_redirect_handler
 
@@ -44,7 +44,8 @@ urlpatterns = [
     (r"/api/v1/user/devices", APIUserDeviceHandler), # GET, POST
     (r"/api/v1/user/devices/([^/]+)", APIUserDeviceHandler), # GET
     (r"/api/v1/user/devices/([^/]+)/active", APIUserDeviceActiveHandler), # GET
-    (r"/api/v1/user/groups", APIUserGroupHandler), # GET, POST
+    (r"/api/v1/user/groups", APIUserGroupListHandler), # GET, POST
+    # (r"/api/v1/user/groups/([^/]+)", APIUserGroupHandler), # GET, POST, DELETE  TODO(ssx)
     (r"/api/v1/user/settings", APIUserSettingsHandler), # GET, PUT
     (r"/api/v1/admins", APIAdminListHandler),
     # GET /api/v1/devices

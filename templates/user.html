@@ -44,12 +44,16 @@
             <code>http GET http://localhost:4000/api/v1/user Authorization:'Bearer <span v-text="token"></span>'</code>
         </p>
     </div>
-    <div class="card">
-        <h4>所属组</h4>
+    <div>
+        <hr>
+        <h4>组管理 <a href="/user/group_create"><small>创建组</small></a></h4>
+        <el-table :data="groups">
+            <el-table-column prop="id" label="名称"></el-table-column>
+            <el-table-column prop="name" label="备注"></el-table-column>
+        </el-table>
         <ul>
             <li v-for="g in groups">Name: {{!g.name}} ID: {{!g.id}} Admin: {{!g.auth.admin ? "true" : "false"}}</li>
         </ul>
-        <a href="/user/group_create">创建组</a>
     </div>
 </div>
 {% end %}

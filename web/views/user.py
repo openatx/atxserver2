@@ -39,8 +39,8 @@ class APIAdminListHandler(AdminRequestHandler):
 
     async def post(self):
         payload = self.get_payload()
-        ret = await db.table("users").get(payload["email"]).update(
-            {"admin": True})
+        ret = await db.table("users").get(payload["email"]
+                                          ).update({"admin": True})
         self.write_json({
             "success": True,
             "data": ret,
@@ -112,9 +112,13 @@ class UserGroupCreateHandler(AuthRequestHandler):
         self.render("group_create.html")
 
 
-class APIUserGroupHandler(AuthRequestHandler):
+_GROUP_ADMIN = 2
+_GROUP_USER = 1
+
+
+class APIUserGroupListHandler(AuthRequestHandler):
     def get(self):
-        pass
+        self.write_json(self.current_user)
 
     async def post(self):
         id = self.get_argument("id")
@@ -130,4 +134,22 @@ class APIUserGroupHandler(AuthRequestHandler):
                 }
             }
         })
-        self.write_json(ret)
+        if ret['inserted']:
+            await db.table("users").get(self.current_user.email).update(
+                {"groups": {
+                    self.current_user.email: _GROUP_ADMIN,
+                }})
+            self.write_json({
+                "success": True,
+                "description": "Group successfully created"
+            })
+        else:
+            self.set_status(400)  # bad request
+            self.write_json({
+                "success": False,
+                "description": "GroupID Duplicated error, ID=" + id
+            })
+
+
+class APIUserGroupHandler(AuthRequestHandler):
+    pass

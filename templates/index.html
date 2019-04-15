@@ -78,10 +78,6 @@
                 <template v-else>
                     <a :href='"/devices/"+scope.row.udid+"/remotecontrol"' target="_blank">
                         <el-button size="mini">
-                            <template v-if="!!scope.row.owner">
-                                <i v-if="scope.row.owner==user.email" class="fas fa-lock color-yellow"></i>
-                                <i v-else class="fas fa-user" :title="scope.row.owner"></i>
-                            </template>
                             <span style="color: blue">点击使用</span>
                         </el-button>
                     </a>
@@ -89,7 +85,15 @@
             </template>
         </el-table-column>
         <!-- <el-table-column prop="platform" label="类型"></el-table-column> -->
-        <el-table-column label="设备名" prop="prop_name"></el-table-column>
+        <el-table-column label="设备名" prop="prop_name">
+            <template slot-scope="scope">
+                <template v-if="!!scope.row.owner">
+                    <i v-if="scope.row.owner==user.email" class="fas fa-lock color-yellow"></i>
+                    <i v-else class="fas fa-user" :title="scope.row.owner"></i>
+                </template>
+                <span v-text="scope.row.prop_name"></span>
+            </template>
+        </el-table-column>
         <el-table-column :sort-method="tableSortBy('prop_propertyId')" sortable label="资产编号">
             <template slot-scope="scope">
                 <!-- <el-input size="mini"></el-input> -->
