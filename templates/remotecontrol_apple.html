@@ -206,6 +206,7 @@
                   </span>
                 </el-dialog>
 
+                <el-button size="mini" @click="screenshot">截图</el-button>
               </div>
             </div>
 
@@ -341,6 +342,24 @@
           }
         },
         methods: {
+          screenshot() {
+            $.ajax({
+              url: this.path2url("/screenshot"),
+              dataType: "json",
+            }).then(ret => {
+              if (window.navigator.msSaveOrOpenBlob) {
+                alert("IE is not supported !!!")
+                return
+              }
+              var a = document.createElement("a");
+              a.href = "data:image/jpeg;base64," + ret.value;
+              a.download = "screen-" + new Date().getTime() + ".jpg";
+              a.click();
+              setTimeout(function () {
+                document.body.removeChild(a);
+              }, 0);
+            })
+          },
           appOpen(bundleId) {
             return $.ajax({
               method: "post",
