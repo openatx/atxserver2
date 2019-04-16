@@ -48,8 +48,9 @@ def main():
     udid = device['udid']
     logger.info("Choose device: \"%s\" udid=%s", device['properties']['name'],
                 udid)
-    ret = request_api(
-        "/api/v1/user/devices", method="post", json={"udid": udid})
+    ret = request_api("/api/v1/user/devices",
+                      method="post",
+                      json={"udid": udid})
     print(ret)
 
     try:
@@ -67,7 +68,7 @@ def main():
             params={"udid": udid},
             data={
                 "url":
-                "https://gohttp.nie.netease.com/tools/apks/ApiDemos-debug.apk"
+                "https://github.com/openatx/atxserver2/releases/download/v0.2.0/ApiDemos-debug.apk"
             })
         pprint(ret)
 
@@ -77,6 +78,7 @@ def main():
         time.sleep(1)
         d = u2.connect_usb(adb_remote_addr)
         print(d.info)
+        d.app_start("io.appium.android.apis")
         d.xpath("App").click()  # same as d(text="App").click()
         logger.debug("Assert Alert button exists")
         assert d(text="Alarm").wait()

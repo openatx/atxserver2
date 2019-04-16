@@ -196,6 +196,7 @@
                   <i class="fas fa-hammer"></i>
                   修复旋转
                 </el-button>
+                <el-button size="mini" @click="screenshot">截图</el-button>
 
                 <el-button size="mini" :loading="alert.loading" @click="chooseAlertButtons">
                   选择弹框按钮
@@ -206,7 +207,6 @@
                   </span>
                 </el-dialog>
 
-                <el-button size="mini" @click="screenshot">截图</el-button>
               </div>
             </div>
 

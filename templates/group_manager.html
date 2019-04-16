@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% block title %}创建新组{% end %}
+{% block navlinks %}
+<a class="nav-item nav-link active" href='/user/group_create'>
+    <i class="fas fa-users"></i> 创建新组
+</a>
+{% end %}
+
+{% block content %}
+<div class="container">
+    <h2>GroupName</h2>
+    <el-table :data="tableData">
+
+    </el-table>
+    <form method="post" action="/api/v1/user/groups" @submit.prevent="submit">
+        <div class="form-group">
+            <label>GroupID</label>
+            <input type="text" name="id" v-model="id" class="form-control" required>
+            <small class="form-text text-muted">建议全英文，不能包含@</small>
+        </div>
+        <div class="form-group">
+            <label>GroupName</label>
+            <input type="text" name="name" v-model="name" class="form-control" required>
+            <small class="form-text text-muted">这个可以中文，目前仅作为描述字段</small>
+        </div>
+        <button type="submit" class="btn btn-default btn-outline-primary">创建组</button>
+    </form>
+</div>
+{% end %}
+
+{% block script %}
+{% end %}

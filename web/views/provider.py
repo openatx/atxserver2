@@ -79,7 +79,12 @@ class ProviderHeartbeatWSHandler(BaseWebSocketHandler):
         # hotfix for old provider
         if self._owner == "nobody@nobody.io":
             self._owner = ""
-        self.write_message("you are online " + req['name'] + " ID:" + self._id)
+        self.write_message(json.dumps({
+            "success": True,
+            "id": self._id,
+        }))
+        logger.debug("A new provider is online " + req['name'] + " ID:" +
+                     self._id)
 
     async def _on_update(self, req):
         """
