@@ -1,6 +1,7 @@
 six
 bunch
 logzero
-tornado==6.0.*
+tornado>=5.0
 requests
 apkutils-patch>=0.5.4,<=0.6.0
+rethinkdb==2.4.2.post1
