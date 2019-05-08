@@ -39,8 +39,7 @@ class APIAdminListHandler(AdminRequestHandler):
 
     async def post(self):
         payload = self.get_payload()
-        ret = await db.table("users").get(payload["email"]
-                                          ).update({"admin": True})
+        ret = await db.table("users").get(payload["email"]).update({"admin": True}) # yapf: disable
         self.write_json({
             "success": True,
             "data": ret,
@@ -60,9 +59,7 @@ class APIUserHandler(AuthRequestHandler):
             "admin": false,
             "groups": [
                 {
-                    "auth": {
-                        "admin": true
-                    },
+                    "admin": true,
                     "creator": "fa@anonymous.com",
                     "id": "1",
                     "name": "g4"
@@ -70,24 +67,20 @@ class APIUserHandler(AuthRequestHandler):
             ]
         }
         """
-        user_email = self.current_user.email
+        # get user groups
+        gids = self.current_user.get("groups", {})
+        groups = await db.run(
+            r.expr(gids.keys()).map(lambda id: r.table("groups").get(id).
+                                    without("members")))
+        for g in groups:
+            g['admin'] = (gids[g['id']] == 2)  # 2: admin, 1: user
 
-        def merge_function(v):
-            return {"auth": v.get_field("members")[user_email]}
-
-        groups = await db.table("groups").filter(
-            r.row.has_fields({"members": {
-                user_email: True,
-            }})).merge(merge_function).without("members").all()
-        # groups = []
-        # while await cursor.fetch_next():
-        #     groups.append(await cursor.next())
         user = self.current_user.copy()
         user["groups"] = groups
         self.write_json(user)
 
     def put(self):
-        """ update token """
+        """ update token: todo """
         pass
 
 
@@ -105,51 +98,3 @@ class APIUserSettingsHandler(AuthRequestHandler):
             "settings": payload,
         }) # yapf: disable
         self.write_json(ret)
-
-
-class UserGroupCreateHandler(AuthRequestHandler):
-    def get(self):
-        self.render("group_create.html")
-
-
-_GROUP_ADMIN = 2
-_GROUP_USER = 1
-
-
-class APIUserGroupListHandler(AuthRequestHandler):
-    def get(self):
-        self.write_json(self.current_user)
-
-    async def post(self):
-        id = self.get_argument("id")
-        name = self.get_argument("name")
-        ret = await db.table("groups").insert({
-            "id": id,
-            "name": name,
-            "createdAt": time_now(),
-            "creator": self.current_user.email,
-            "members": {
-                self.current_user.email: {
-                    "admin": True,
-                }
-            }
-        })
-        if ret['inserted']:
-            await db.table("users").get(self.current_user.email).update(
-                {"groups": {
-                    self.current_user.email: _GROUP_ADMIN,
-                }})
-            self.write_json({
-                "success": True,
-                "description": "Group successfully created"
-            })
-        else:
-            self.set_status(400)  # bad request
-            self.write_json({
-                "success": False,
-                "description": "GroupID Duplicated error, ID=" + id
-            })
-
-
-class APIUserGroupHandler(AuthRequestHandler):
-    pass

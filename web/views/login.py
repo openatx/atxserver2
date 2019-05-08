@@ -33,7 +33,7 @@ class SimpleLoginHandler(BaseRequestHandler):
     def get(self):
         self.set_cookie("next", self.get_argument("next", "/"))
         self.write('<html><body><form action="/login" method="post">'
-                   'Name: <input type="text" name="name">'
+                   'Name: <input type="text" name="name" required>'
                    '<input type="submit" value="Sign in">'
                    '</form></body></html>')
 

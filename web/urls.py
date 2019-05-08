@@ -4,18 +4,19 @@
 import os
 
 from .views import LogoutHandler, MainHandler
-from .views.device import (DeviceChangesWSHandler, DeviceItemHandler,
-                           DeviceListHandler, APIUserDeviceHandler,
-                           APIDeviceListHandler, APIUserDeviceActiveHandler,
-                           AndroidDeviceControlHandler, AppleDeviceListHandler,
-                           APIDeviceHandler, APIDevicePropertiesHandler)
+from .views.base import make_redirect_handler
+from .views.device import (AndroidDeviceControlHandler, APIDeviceHandler,
+                           APIDeviceListHandler, APIDevicePropertiesHandler,
+                           APIUserDeviceActiveHandler, APIUserDeviceHandler,
+                           AppleDeviceListHandler, DeviceChangesWSHandler,
+                           DeviceItemHandler, DeviceListHandler)
+from .views.group import (APIGroupUserListHandler, APIUserGroupListHandler,
+                          UserGroupCreateHandler)
 from .views.provider import ProviderHeartbeatWSHandler
 from .views.upload import UploadItemHandler, UploadListHandler
-from .views.user import (UserHandler, UserGroupCreateHandler, AdminListHandler,
-                         APIAdminListHandler, APIUserGroupListHandler,
-                         APIUserHandler, APIUserSettingsHandler)
-from .views.base import make_redirect_handler
-
+from .views.user import (
+    AdminListHandler, APIAdminListHandler, APIUserHandler,
+    APIUserSettingsHandler, UserHandler)
 
 urlpatterns = [
     (r"/", MainHandler),
@@ -44,10 +45,12 @@ urlpatterns = [
     (r"/api/v1/user/devices", APIUserDeviceHandler), # GET, POST
     (r"/api/v1/user/devices/([^/]+)", APIUserDeviceHandler), # GET
     (r"/api/v1/user/devices/([^/]+)/active", APIUserDeviceActiveHandler), # GET
-    (r"/api/v1/user/groups", APIUserGroupListHandler), # GET, POST
-    # (r"/api/v1/user/groups/([^/]+)", APIUserGroupHandler), # GET, POST, DELETE  TODO(ssx)
     (r"/api/v1/user/settings", APIUserSettingsHandler), # GET, PUT
-    (r"/api/v1/admins", APIAdminListHandler),
+    (r"/api/v1/admins", APIAdminListHandler), # GET, POST
+    ## Group API
+    # (r"/api/v1/user/groups/([^/]+)", APIUserGroupHandler), # GET, POST, DELETE  TODO(ssx)
+    (r"/api/v1/user/groups", APIUserGroupListHandler), # GET, POST
+    (r"/api/v1/groups/([^/]+)/users", APIGroupUserListHandler), # GET, TODO(POST)
     # GET /api/v1/devices
     # POST /api/v1/user/devices/{serial}/remoteConnect
     # DELETE /api/v1/user/devices/{serial}/remoteConnect

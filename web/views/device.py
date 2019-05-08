@@ -34,8 +34,10 @@ class ReleaseError(Exception):
 class APIDeviceListHandler(CorsMixin, BaseRequestHandler):
     async def get(self):
         def filter_accessible(v):  # filter out private device
-            return r.expr([self.current_user.email,
-                           ""]).contains(v['owner'].default(""))
+            groups = self.current_user.get("groups", {}).keys()
+            groups = list(groups) + [self.current_user.email, ""
+                                     ]  # include user-private device
+            return r.expr(groups).contains(v['owner'].default(""))
 
         reql = db.table_devices.without("sources", "source")
         if not self.current_user.admin:
@@ -321,7 +323,16 @@ class DeviceChangesWSHandler(BaseWebSocketHandler):
         #     self.__opened = False
 
     async def send_feed(self):
-        conn, feed = await db.table_devices.watch()
+        def filter_accessible(v):  # filter out private device
+            groups = self.current_user.get("groups", {}).keys()
+            groups = list(groups) + [self.current_user.email, ""]
+            return r.expr(groups).contains(v['owner'].default(""))
+
+        reql = db.table_devices
+        if not self.current_user.admin:
+            reql = reql.filter(filter_accessible)
+
+        conn, feed = await reql.watch()
         with conn:
             while await feed.fetch_next():
                 if not self.__opened:

@@ -23,7 +23,7 @@
         <button type="submit" class="btn btn-default btn-outline-primary">创建组</button>
     </form>
     <div>
-        <a href="/api/v1/user/groups">组</a>
+        <a href="/api/v1/user/groups">/api/v1/user/groups</a>
     </div>
 </div>
 {% end %}
@@ -47,6 +47,7 @@
                     }
                 }).done(ret => {
                     console.log(ret)
+                    window.location.pathname = "/user"
                 }).fail(ret => {
                     if (ret.status == 400) {
                         this.$message.error(ret.responseJSON.description)

@@ -94,6 +94,13 @@ docker run -it --rm --privileged -v /dev/bus/usb:/dev/bus/usb --net host \
 
 参考项目介绍 [atxserver2-ios-provider](https://github.com/openatx/atxserver2-ios-provider)
 
+### 私有设备接入（Beta）
+目前只实现了Android
+
+`atxserver2-android-provider`启动的时候可以通过传递参数 `--owner=xingxing` 声明该provider所有连接的设备属于`xingxing`这个组所有，或者`--owner=panpan@gmail.com` 声明为panpan个人所有
+
+通过点击导航栏的下拉菜单，点击`用户信息`,在这个标签页下可以获取个人的token，也可以进行组的管理。（目前还没有组成员管理的功能）
+
 ## 管理员功能
 默认第一个登录的用户会成为管理员
 
