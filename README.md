@@ -79,10 +79,10 @@ python3 main.py
 
 ```bash
 SERVER_URL="http://10.0.0.1:4000" # 这个修改成自己的atxserver2地址
+IMAGE="codeskyblue/atxserver2-android-provider"
 docker pull $IMAGE
-docker run -it --rm --privileged -v /dev/bus/usb:/dev/bus/usb --net host \
-    codeskyblue/atxserver2-android-provider \
-    python main.py --server ${SERVER_URL}
+docker run --rm --privileged -v /dev/bus/usb:/dev/bus/usb --net host \
+    ${IMAGE} python main.py --server ${SERVER_URL}
 ```
 
 该镜像会把所有必要的资源 （atx-uiautomator.apk, minicap, minitouch, atx-agent) 全部推送到手机上。
