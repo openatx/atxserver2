@@ -316,6 +316,9 @@
                       class="fas fa-sync"></i>
                     刷新</button>
                   <button type="button" :disabled="!topApp.packageName" class="btn btn-sm btn-outline-primary"
+                    @click='runShell("am force-stop "+topApp.packageName)'><i class="fas fa-stop-circle"></i>
+                    Kill</button>
+                  <button type="button" :disabled="!topApp.packageName" class="btn btn-sm btn-outline-primary"
                     @click="addTopAppToShortcut"><i class="fas fa-blind"></i> 添加到快捷入口</button>
                 </div>
               </div>
