@@ -462,7 +462,7 @@ class D(object):
         source = device2source(device)
         if not source:  # 设备离线了
             return
-
+        
         async def cold_device():
             from tornado.httpclient import HTTPError
             from tornado.httpclient import AsyncHTTPClient, HTTPRequest
@@ -471,6 +471,10 @@ class D(object):
             if not source.get('url'):
                 await self.update({"colding": False})
                 return
+            
+            source_id = source.get("id")
+            from .provider import ProviderHeartbeatWSHandler
+            await ProviderHeartbeatWSHandler.release(source_id, device['udid'])
 
             try:
                 url = source['url'] + "/cold?" + urllib.parse.urlencode(
