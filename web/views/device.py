@@ -464,16 +464,22 @@ class D(object):
             return
 
         async def cold_device():
+            from tornado.httpclient import HTTPError
             from tornado.httpclient import AsyncHTTPClient, HTTPRequest
             http_client = AsyncHTTPClient()
             secret = source.get('secret', '')
             if not source.get('url'):
                 await self.update({"colding": False})
-            else:
+                return
+
+            try:
                 url = source['url'] + "/cold?" + urllib.parse.urlencode(
                     dict(udid=device['udid'], secret=secret))
                 request = HTTPRequest(url, method="POST", body='')
                 await http_client.fetch(request)
+            except HTTPError as e:
+                logger.error("device [%s] release error: %s", self.udid, e)
+                await self.update({"colding": False})
 
         IOLoop.current().add_callback(cold_device)
 
