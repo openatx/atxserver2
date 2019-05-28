@@ -161,8 +161,8 @@
           <i v-else-if="!whatsinput.disabled" class="fas fa-keyboard" style="color: green"></i>
           <i v-else class="fas fa-keyboard" style="color:gray"></i>
         </span>
-        <span>
-          <i @click="hotfix" title="hotfix" class="fas fa-hammer"></i>
+        <span @click="hotfix" class="cursor-pointer">
+          <i title="hotfix" class="fas fa-hammer"></i> 修复旋转
         </span>
       </section>
       <!-- screen body -->
@@ -198,7 +198,7 @@
                 <i class="fas fa-keyboard"></i> 输入框
                 <span class="float-right">
                   <el-tooltip effect="dark" content="修复输入法" placement="top-start">
-                    <i class="fas fa-tools float-right cursor-pointer" @click="fixInputMethod"></i>
+                    <i class="fas fa-tools float-right cursor-pointer" @click="fixInputMethod"> 修复输入法</i>
                   </el-tooltip>
                 </span>
               </div>
@@ -397,6 +397,13 @@
 <script src="https://cdn.jsdelivr.net/npm/css-element-queries@1.1.1/src/ResizeSensor.min.js"></script>
 <script src="{{static_url('javascripts/imagepool.js')}}"></script>
 <script>
+
+  jQuery.delay = function (ms, value) {
+    var defer = new jQuery.Deferred();
+    setTimeout(function () { defer.resolve(value); }, ms || 0);
+    return defer.promise();
+  };
+
   const udid = "{{udid}}"
   const userEmail = "{{current_user.email}}"
 
@@ -500,24 +507,31 @@
             }).catch(() => {
             })
           },
-          fixInputMethod() {
-            this.$notify.info({
-              title: "输入法",
-              message: "修复中",
-            })
+          fixInputMethod(quite) {
+            if (!quite) {
+              this.$notify.info({
+                title: "输入法",
+                message: "修复中",
+              })
+            }
             const inputMethod = "com.buscode.whatsinput/.WifiInputMethod"
             return this.runShell("ime enable " + inputMethod)
               .then(() => {
                 return this.runShell("ime set " + inputMethod)
               })
+              .then($.delay(1000))
               .then(() => {
                 this.$refs.whatsinput.focus()
                 return this.loadWhatsinput()
               })
               .then(() => {
-                this.$notify.success({ message: "输入法修复完成" })
+                if (!quite) {
+                  this.$notify.success({ message: "输入法修复完成" })
+                }
               }, () => {
-                this.$notify.success({ message: "输入法修复失败，F12查看详情" })
+                if (!quite) {
+                  this.$notify.success({ message: "输入法修复失败，F12查看详情" })
+                }
               })
           },
           loadWhatsinput(callback) {
@@ -538,6 +552,7 @@
                   this.whatsinput.disabled = false
                   setTimeout(() => {
                     this.$refs.whatsinput.focus()
+                    this.$refs.whatsinput.select()
                   }, 1)
                   break;
                 case "InputFinish":
@@ -1290,6 +1305,8 @@
           this.closeWindowWhenReleased(5000)
 
           this.initClipboardJS()
+
+          this.fixInputMethod(true)
         },
         computed: {
           address() {
