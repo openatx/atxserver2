@@ -91,9 +91,15 @@
                     <i v-if="scope.row.owner==user.email" class="fas fa-lock color-yellow"></i>
                     <i v-else class="fas fa-user" :title="scope.row.owner"></i>
                 </template>
-                <span v-text="scope.row.prop_name"></span>
+                <atx-edit-inline :readonly="!user.admin" :value="scope.row.prop_name"
+                    @change="updatePropertyName(scope.row.udid, $event)">
+                </atx-edit-inline>
             </template>
         </el-table-column>
+
+        <el-table-column prop="prop_model" sortable label="型号"></el-table-column>
+        <el-table-column prop="prop_brand" sortable label="品牌"></el-table-column>
+
         <el-table-column :sort-method="tableSortBy('prop_propertyId')" sortable label="资产编号">
             <template slot-scope="scope">
                 <!-- <el-input size="mini"></el-input> -->
@@ -117,6 +123,17 @@
                 </template>
             </template>
         </el-table-column>
+
+       <el-table-column :sort-method="tableSortBy('department')" sortable label="所属部门">
+            <template slot-scope="scope">
+                <!-- <el-input size="mini"></el-input> -->
+                <atx-edit-inline :readonly="!user.admin" :value="scope.row.department"
+                    @change="updateDeviceDepartment(scope.row.udid, $event)">
+                </atx-edit-inline>
+                <!-- <span v-text="prop_propertyId"></span> <i class="fas fa-edit cursor-pointer"></i> -->
+            </template>
+        </el-table-column>
+
         <!-- <el-table-column prop="prop_brand" label="品牌"></el-table-column> -->
         <el-table-column prop="prop_version" sortable :sort-method="semverCompare" label="Version"></el-table-column>
         <el-table-column sortable :sort-method="tableSortBy('usingDuration')" label="使用时长">
@@ -291,6 +308,38 @@
                             contentType: "application/json",
                             data: JSON.stringify({
                                 "propertyId": text,
+                            })
+                        }).fail(ret => {
+                            if (ret.status == 400) {
+                                this.$message.error(ret.responseJSON.description)
+                            } else {
+                                this.$message.error(ret.responseText)
+                            }
+                        })
+                    },
+                    updatePropertyName(udid, text) { // admin required
+                        $.ajax({
+                            url: "/api/v1/devices/" + udid + "/properties",
+                            method: "put",
+                            contentType: "application/json",
+                            data: JSON.stringify({
+                                "name": text,
+                            })
+                        }).fail(ret => {
+                            if (ret.status == 400) {
+                                this.$message.error(ret.responseJSON.description)
+                            } else {
+                                this.$message.error(ret.responseText)
+                            }
+                        })
+                    },
+                    updateDeviceDepartment(udid, text) { // admin required
+                        $.ajax({
+                            url: "/api/v1/devices/" + udid,
+                            method: "put",
+                            contentType: "application/json",
+                            data: JSON.stringify({
+                                "department": text,
                             })
                         }).fail(ret => {
                             if (ret.status == 400) {
