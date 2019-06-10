@@ -75,7 +75,7 @@ python3 main.py
 接下来，进行安卓设备接入。这时需要用到另外一个项目 [atxserver2-android-provider](https://github.com/openatx/atxserver2-android-provider)
 这个项目运行需要Python3.6+和NodeJS
 
-这里我们强烈推荐使用Docker部署，源码部署请参考文档 [atxserver2-android-provider](https://github.com/openatx/atxserver2-android-provider)
+如果你用的是Linux系统，推荐使用Docker部署，其他平台需要用源码部署，具体请参考文档 [atxserver2-android-provider](https://github.com/openatx/atxserver2-android-provider)
 
 ```bash
 SERVER_URL="http://10.0.0.1:4000" # 这个修改成自己的atxserver2地址
