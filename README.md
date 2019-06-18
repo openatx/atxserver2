@@ -1,13 +1,9 @@
 ## atxserver2
-移动设备管理平台
+移动设备管理平台(支持Android和iOS), 欢迎加入QQ群交流 **849846266**
 
-**Beta，尝鲜者可提前体验，虽然还有很多没开发的**
+Logo
 
 ![img](static/favicon-dark.png)
-
-## 环境依赖
-- Python3.6+
-- [RethinkDB](https://rethinkdb.com/)
 
 ## 部署方案1 （docker-compose方式）
 代码Clone到本地
@@ -31,7 +27,6 @@ docker-compose up
 
 ```bash
 pip3 install -r requirements.txt
-pip3 install -r requirements-dev.txt  # include the new rethinkdb
 ```
 
 最简单的启动方法 （默认连接的rethinkdb地址 `localhost:28015`)
