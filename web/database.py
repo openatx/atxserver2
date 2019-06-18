@@ -43,10 +43,12 @@ class DB(object):
 
         conn = r.connect(**self.__connect_kwargs)
 
-        def safe_run(rsql):
+        def safe_run(rsql, show_error=False):
             try:
                 return rsql.run(conn)
-            except r.RqlRuntimeError:
+            except r.RqlRuntimeError as e:
+                if show_error:
+                    logger.warning("safe_run rsql:%s, error:%s", rsql, e)
                 return False
 
         # init databases here
@@ -68,11 +70,12 @@ class DB(object):
         devices = safe_run(
             rdb.table("devices").filter({
                 "using": True
-            }).pluck("udid"))
+            }).pluck("udid"), show_error=True)
 
-        for d in devices:
-            logger.debug("Device: %s is in using state", d['udid'])
-            D(d['udid']).release_until_idle()
+        if devices:
+            for d in devices:
+                logger.debug("Device: %s is in using state", d['udid'])
+                D(d['udid']).release_until_idle()
 
         r.set_loop_type("tornado")
 
