@@ -1,7 +1,9 @@
 {% extends "base.html" %}
 
 {% block title %}设备列表{% end %}
-
+{%block nav_container_class%}
+class="container-fluid"
+{%end%}
 {% block script %}
 {% end %}
 {% block style %}
@@ -30,7 +32,7 @@
 {% end %}
 
 {% block content %}
-<div class="container">
+<div class="container-fluid">
     <span onclick="location.reload()">
         <el-alert v-if="websocketDisconnected" title="WebSocket连接断开，点击或F5刷新重连" type="error">
         </el-alert>
@@ -84,31 +86,6 @@
                 </template>
             </template>
         </el-table-column>
-        <!-- <el-table-column prop="platform" label="类型"></el-table-column> -->
-        <el-table-column label="设备名" prop="prop_name">
-            <template slot-scope="scope">
-                <template v-if="!!scope.row.owner">
-                    <i v-if="scope.row.owner==user.email" class="fas fa-lock color-yellow"></i>
-                    <i v-else class="fas fa-user" :title="scope.row.owner"></i>
-                </template>
-                <atx-edit-inline :readonly="!user.admin" :value="scope.row.prop_name"
-                    @change="updatePropertyName(scope.row.udid, $event)">
-                </atx-edit-inline>
-            </template>
-        </el-table-column>
-
-        <el-table-column prop="prop_model" sortable label="型号"></el-table-column>
-        <el-table-column prop="prop_brand" sortable label="品牌"></el-table-column>
-
-        <el-table-column :sort-method="tableSortBy('prop_propertyId')" sortable label="资产编号">
-            <template slot-scope="scope">
-                <!-- <el-input size="mini"></el-input> -->
-                <atx-edit-inline :readonly="!user.admin" :value="scope.row.prop_propertyId"
-                    @change="updatePropertyId(scope.row.udid, $event)">
-                </atx-edit-inline>
-                <!-- <span v-text="prop_propertyId"></span> <i class="fas fa-edit cursor-pointer"></i> -->
-            </template>
-        </el-table-column>
         <el-table-column label="设备编号">
             <template slot-scope="scope">
                 <template v-if="scope.row.status == 'stop using'">
@@ -121,6 +98,36 @@
                         {{!(scope.row.prop_serial || scope.row.udid) | shortString}}
                     </span>
                 </template>
+            </template>
+        </el-table-column>
+        <!-- <el-table-column prop="platform" label="类型"></el-table-column> -->
+        <el-table-column label="设备名" prop="prop_name">
+            <template slot-scope="scope">
+                <template v-if="!!scope.row.owner">
+                    <i v-if="scope.row.owner==user.email" class="fas fa-lock color-yellow"></i>
+                    <i v-else class="fas fa-user" :title="scope.row.owner"></i>
+                </template>
+                <span v-text="scope.row.prop_name"></span>
+                <!-- <atx-edit-inline :readonly="!user.admin" :value="scope.row.prop_name"
+                    @change="updatePropertyName(scope.row.udid, $event)">
+                </atx-edit-inline> -->
+            </template>
+        </el-table-column>
+
+        <el-table-column label="型号">
+            <template slot-scope="scope">
+                <span v-text="scope.row.properties.product || scope.row.properties.model"></span>
+            </template>
+        </el-table-column>
+        <el-table-column prop="prop_brand" sortable label="品牌"></el-table-column>
+
+        <el-table-column :sort-method="tableSortBy('prop_propertyId')" sortable label="资产编号">
+            <template slot-scope="scope">
+                <!-- <el-input size="mini"></el-input> -->
+                <atx-edit-inline :readonly="!user.admin" :value="scope.row.prop_propertyId"
+                    @change="updatePropertyId(scope.row.udid, $event)">
+                </atx-edit-inline>
+                <!-- <span v-text="prop_propertyId"></span> <i class="fas fa-edit cursor-pointer"></i> -->
             </template>
         </el-table-column>
 
@@ -268,8 +275,8 @@
                         return moment.utc(duration.asMilliseconds()).format("HH:mm:ss")
                     },
                     shortString(value) {
-                        if (value.length > 16) {
-                            return value.slice(0, 15) + "..."
+                        if (value.length > 10) {
+                            return value.slice(0, 8) + ".."
                         }
                         return value;
                     }
