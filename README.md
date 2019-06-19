@@ -1,7 +1,7 @@
 ## atxserver2
-移动设备管理平台(支持Android和iOS), 欢迎加入QQ群交流 **849846266**
+移动设备管理平台(支持Android和iOS), 欢迎加入QQ群交流
 
-Logo
+![image-20190619180012756](docs/qq.png)
 
 ![img](static/favicon-dark.png)
 
