@@ -115,8 +115,11 @@ class ProviderHeartbeatWSHandler(BaseWebSocketHandler):
             updates['sources'] = {
                 self._id: source,
             }
+        whatsInputAddressIP = source['whatsInputAddress'].split(':')[0]
+        updates['locationProperties'] = dict(location=whatsInputAddressIP, providerIP=whatsInputAddressIP)
         updates['updatedAt'] = time_now()
         await db.table("devices").save(updates, udid)
+        await db.table("location").save(updates['locationProperties'], whatsInputAddressIP, excludeItems=['location'])  # yapf: disable
 
     async def on_message(self, message):
         req = json.loads(message)

@@ -52,7 +52,6 @@ class APILocationListHandler(AdminRequestHandler):
         {
             "success": true,
             "location": [{
-                "id": "",
                 "location": "",
                 "providerIP" : ""
                 ...
@@ -65,11 +64,11 @@ class APILocationListHandler(AdminRequestHandler):
             "location": ret,
         })
 
-    async def put(self, locationID):
+    async def put(self, providerIP):
         """
         """
         payload = self.get_payload()
-        ret = await db.table("location").get(locationID).update(payload)  # yapf: disable
+        ret = await db.table("location") .get(providerIP).update(payload)  # yapf: disable
         self.write_json({
             "success": True,
             "location": ret,
@@ -84,10 +83,10 @@ class APILocationListHandler(AdminRequestHandler):
             "data": ret,
         })
 
-    async def delete(self, locationID):
+    async def delete(self, providerIP):
         """
         """
-        ret = await db.table("location").get(locationID).delete()  # yapf: disable
+        ret = await db.table("location").get(providerIP).delete()  # yapf: disable
         self.write_json({
             "success": True,
             "location": ret,

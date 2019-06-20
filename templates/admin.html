@@ -107,13 +107,14 @@
       <el-input v-model="form.location"></el-input>
     </el-form-item>
     <el-form-item label="所在机器IP（USB插在哪个机器上）">
-        <el-input v-model="form.providerIP"></el-input>
+        <el-input v-if="locationOperAction === 'new'" v-model="form.providerIP"></el-input>
+        <el-input v-else :disabled="true" v-model="form.providerIP"></el-input>
     </el-form-item>
   </el-form>
   <div slot="footer" class="dialog-footer">
     <el-button @click="dialogTableVisible = false">取 消</el-button>
     <el-button v-if="locationOperAction === 'new'" type="primary" @click="handleNewLocation">确 定</el-button>
-      <el-button v-else="locationOperAction === 'edit'" type="primary" @click="handleEditLocation">保 存</el-button>
+    <el-button v-else="locationOperAction === 'edit'" type="primary" @click="handleEditLocation">保 存</el-button>
   </div>
 </el-dialog>
 
@@ -186,9 +187,10 @@
                         }).then(ret => {
                             console.log(ret)
                             this.$message("添加成功")
+                            that.dialogTableVisible = false
+                            that.handleGetLocation({'name':'dept'})
                         })
-                        that.dialogTableVisible = false
-                        that.handleGetLocation({'name':'dept'})
+
                     },
                     handleGetLocation(value){
                         let that = this
@@ -205,7 +207,7 @@
                     handleEditLocation(){
                         let that = this
                         $.ajax({
-                            url: "/api/v1/location/" + that.form.id,
+                            url: "/api/v1/location/" + that.form.providerIP,
                             method: "put",
                             data: JSON.stringify({
                                     location: that.form.location,
@@ -222,15 +224,13 @@
                     handleDeleteLocation(index, row){
                         let that = this
                         $.ajax({
-                        url: "/api/v1/location/" + row.id,
+                        url: "/api/v1/location/" + row.providerIP,
                         method: "delete",
                         }).then(ret => {
                             console.log(ret)
                             this.$message("删除成功")
                         })
                         that.handleGetLocation({'name':'dept'})
-
-
                     },
 
                 }

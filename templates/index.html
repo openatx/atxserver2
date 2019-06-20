@@ -132,17 +132,9 @@ class="container-fluid"
         </el-table-column>
 
        <el-table-column :sort-method="tableSortBy('location')" sortable label="所属部门(机器)" >
-            <template slot-scope="scope">
-                <el-select v-model="scope.row.providerIP" placeholder="请选择" size="mini" style="width:100px" @change="updateDeviceLocation(scope.row)">
-                    <el-option
-                        v-for="item in locationOptions"
-                        :key="item.providerIP"
-                        :label="item.location"
-                        :value="item.providerIP">
-                    </el-option>
-                </el-select>
-                <!-- <span v-text="prop_propertyId"></span> <i class="fas fa-edit cursor-pointer"></i> -->
-            </template>
+           <template slot-scope="scope">
+                <span v-text="scope.row.locationProperties.location || scope.row.locationProperties.providerIP"></span>
+           </template>
         </el-table-column>
 
         <!-- <el-table-column prop="prop_brand" label="品牌"></el-table-column> -->
@@ -191,6 +183,7 @@ class="container-fluid"
                 }, { "devices": ret.devices }),
                 computed: {
                     tableData() {
+                        let that = this
                         let devices = this.orderedDevices.map(v => {
                             for (const key in v.properties) {
                                 if (v.properties.hasOwnProperty(key)) {
@@ -201,9 +194,21 @@ class="container-fluid"
                             v['display_size'] = display.width + "x" + display.height;
                             return v;
                         })
+
                         const fp = this.filters.platform
                         if (Object.values(fp).some(b => b)) {
                             devices = devices.filter(v => fp[v.platform])
+                        }
+
+                        // 将手机中的location字段，和实际维护的location表做匹配并转换
+
+                        for(let i=0; i < devices.length; i++){
+                            for(let j=0; j < that.locationOptions.length; j++){
+                                if(devices[i]['locationProperties']['providerIP'] === that.locationOptions[j]['providerIP']){
+                                    devices[i]['locationProperties']['location'] = that.locationOptions[j]['location']
+                                }
+
+                            }
                         }
                         return devices;
                     },
@@ -336,39 +341,6 @@ class="container-fluid"
                             contentType: "application/json",
                             data: JSON.stringify({
                                 "name": text,
-                            })
-                        }).fail(ret => {
-                            if (ret.status == 400) {
-                                this.$message.error(ret.responseJSON.description)
-                            } else {
-                                this.$message.error(ret.responseText)
-                            }
-                        })
-                    },
-                    updateDeviceLocation(data){ // admin required
-                        let that = this
-
-                        let udid = data.udid
-                        let locationProviderIP = data.providerIP
-
-                        let postLoaction = ''
-                        let postProviderIP = ''
-                        for(let i=0; i<that.locationOptions.length; i++){
-                            if(that.locationOptions[i]['providerIP'] === locationProviderIP){
-                                postLoaction = that.locationOptions[i]['location']
-                                postProviderIP = that.locationOptions[i]['providerIP']
-                            }
-                            else{
-                                // 不会出现这种情况
-                            }
-                        }
-                        $.ajax({
-                            url: "/api/v1/devices/" + udid,
-                            method: "put",
-                            contentType: "application/json",
-                            data: JSON.stringify({
-                                "location": postLoaction,
-                                "providerIP": postProviderIP,
                             })
                         }).fail(ret => {
                             if (ret.status == 400) {
