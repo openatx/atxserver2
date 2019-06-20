@@ -216,9 +216,10 @@
                         }).then(ret => {
                             console.log(ret)
                             this.$message("编辑成功")
+                            that.dialogTableVisible = false
+                            that.handleGetLocation({'name':'dept'})
                         })
-                        that.dialogTableVisible = false
-                        that.handleGetLocation({'name':'dept'})
+
 
                     },
                     handleDeleteLocation(index, row){
@@ -229,8 +230,9 @@
                         }).then(ret => {
                             console.log(ret)
                             this.$message("删除成功")
+                            that.handleGetLocation({'name':'dept'})
                         })
-                        that.handleGetLocation({'name':'dept'})
+
                     },
 
                 }
