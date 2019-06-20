@@ -135,7 +135,7 @@ class APIDeviceHandler(CorsMixin, BaseRequestHandler):
 
         props = self.get_payload()
         await db.table("devices").get(udid).update({
-            "department": props['department'],
+            "location": props['location'], "providerIP": props['providerIP'],
         })
         self.write_json({"success": True, "description": "updated"})
 

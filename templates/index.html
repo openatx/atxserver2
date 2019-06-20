@@ -64,7 +64,7 @@ class="container-fluid"
                     <el-button size="mini" disabled>设备离线</el-button>
                 </template>
                 <template v-else-if='"colding" == scope.row.status'>
-                    <el-button disabled :loading="true" size="mini" type="primary">释放中</span>
+                    <el-button disabled :loading="true" size="mini" type="primary">释放中</el-button>
                 </template>
                 <template v-else-if='"busy" == scope.row.status'>
                     <el-button :title="scope.row.userId" style="cursor: not-allowed; background: #f3d19e" size="mini"
@@ -131,12 +131,16 @@ class="container-fluid"
             </template>
         </el-table-column>
 
-       <el-table-column :sort-method="tableSortBy('department')" sortable label="所属部门">
+       <el-table-column :sort-method="tableSortBy('location')" sortable label="所属部门(机器)" >
             <template slot-scope="scope">
-                <!-- <el-input size="mini"></el-input> -->
-                <atx-edit-inline :readonly="!user.admin" :value="scope.row.department"
-                    @change="updateDeviceDepartment(scope.row.udid, $event)">
-                </atx-edit-inline>
+                <el-select v-model="scope.row.providerIP" placeholder="请选择" size="mini" style="width:100px" @change="updateDeviceLocation(scope.row)">
+                    <el-option
+                        v-for="item in locationOptions"
+                        :key="item.providerIP"
+                        :label="item.location"
+                        :value="item.providerIP">
+                    </el-option>
+                </el-select>
                 <!-- <span v-text="prop_propertyId"></span> <i class="fas fa-edit cursor-pointer"></i> -->
             </template>
         </el-table-column>
@@ -165,6 +169,7 @@ class="container-fluid"
             new Vue({
                 el: "#app",
                 data: Object.assign({
+                    locationOptions: [],
                     websocketDisconnected: false,
                     user: {
                         name: currentUserName,
@@ -340,13 +345,30 @@ class="container-fluid"
                             }
                         })
                     },
-                    updateDeviceDepartment(udid, text) { // admin required
+                    updateDeviceLocation(data){ // admin required
+                        let that = this
+
+                        let udid = data.udid
+                        let locationProviderIP = data.providerIP
+
+                        let postLoaction = ''
+                        let postProviderIP = ''
+                        for(let i=0; i<that.locationOptions.length; i++){
+                            if(that.locationOptions[i]['providerIP'] === locationProviderIP){
+                                postLoaction = that.locationOptions[i]['location']
+                                postProviderIP = that.locationOptions[i]['providerIP']
+                            }
+                            else{
+                                // 不会出现这种情况
+                            }
+                        }
                         $.ajax({
                             url: "/api/v1/devices/" + udid,
                             method: "put",
                             contentType: "application/json",
                             data: JSON.stringify({
-                                "department": text,
+                                "location": postLoaction,
+                                "providerIP": postProviderIP,
                             })
                         }).fail(ret => {
                             if (ret.status == 400) {
@@ -422,6 +444,17 @@ class="container-fluid"
                                 event.preventDefault()
                         }
                         console.log(device.udid)
+                    },
+                    getLocationOptions(){
+                        let that = this
+                        $.ajax({
+                            url: "/api/v1/location",
+                            method: "get"
+                        }).then(ret => {
+                            that.locationOptions = ret.location
+                            console.log(ret)
+                            {#this.$message("获取成功")#}
+                        })
                     }
                 },
                 components: {
@@ -470,6 +503,8 @@ class="container-fluid"
                     let wsURL = scheme + "://" + location.host + "/websocket/devicechanges";
                     let ws = new WebSocket(wsURL);
                     let refreshKey = null;
+                    this.getLocationOptions()
+
                     ws.onopen = (evt) => {
                         console.log("Websocket Connected")
                         refreshKey = setInterval(() => {

@@ -28,6 +28,9 @@ class DB(object):
         "groups": {
             "name": "groups",
         },
+        "location": {
+            "name": "location"
+        }
     }
 
     def __init__(self, db='demo', **kwargs):
