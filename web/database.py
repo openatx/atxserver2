@@ -215,7 +215,7 @@ class TableHelper(object):
                 results.append(await cursor.next())
             return results
 
-    async def save(self, data: dict, id=None, excludeItems=None) -> dict:
+    async def save(self, data: dict, id=None, excludes=None) -> dict:
         """Update when exists or insert it
 
         Returns:
@@ -223,9 +223,9 @@ class TableHelper(object):
         """
         data = data.copy()
 
-        if excludeItems:
-            for item in excludeItems:
-                data.pop(item)
+        if excludes:
+            for item in excludes:
+                data.pop(item, None)
 
         if id:
             data[self.primary_key] = id

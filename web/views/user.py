@@ -64,11 +64,11 @@ class APILocationListHandler(AdminRequestHandler):
             "location": ret,
         })
 
-    async def put(self, providerIP):
+    async def put(self, provider_ip):
         """
         """
         payload = self.get_payload()
-        ret = await db.table("location") .get(providerIP).update(payload)  # yapf: disable
+        ret = await db.table("location") .get(provider_ip).update(payload)  # yapf: disable
         self.write_json({
             "success": True,
             "location": ret,

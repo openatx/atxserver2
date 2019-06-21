@@ -201,15 +201,14 @@ class="container-fluid"
                         }
 
                         // 将手机中的location字段，和实际维护的location表做匹配并转换
-
-                        for(let i=0; i < devices.length; i++){
+                        devices.forEach(device=>{
                             for(let j=0; j < that.locationOptions.length; j++){
-                                if(devices[i]['locationProperties']['providerIP'] === that.locationOptions[j]['providerIP']){
-                                    devices[i]['locationProperties']['location'] = that.locationOptions[j]['location']
+                                if(device['locationProperties']['providerIP'] === that.locationOptions[j]['providerIP']){
+                                    device['locationProperties']['location'] = that.locationOptions[j]['location']
                                 }
-
                             }
-                        }
+                        });
+                        console.log(devices);
                         return devices;
                     },
                     orderedDevices() {
