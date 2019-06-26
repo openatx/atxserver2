@@ -115,7 +115,7 @@ class ProviderHeartbeatWSHandler(BaseWebSocketHandler):
             updates['sources'] = {
                 self._id: source,
             }
-        provider_ip = source['whatsInputAddress'].split(':')[0]
+        provider_ip = source['remoteConnectAddressNetwork']
         updates['locationProperties'] = dict(location=provider_ip, providerIP=provider_ip)
         updates['updatedAt'] = time_now()
         await db.table("devices").save(updates, udid)
