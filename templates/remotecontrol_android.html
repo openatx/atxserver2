@@ -265,11 +265,6 @@
                   <i class="fas fa-wifi"></i>
                   WIFI
                 </button>
-                <button class="btn btn-sm btn-outline-primary"
-                  @click="runShell('am start -n com.tencent.tmgp.sgame/.SGameActivity')">
-                  <i class="fas fa-gamepad"></i>
-                  王者荣耀
-                </button>
                 <hr>
                 <span v-for="v in userSettings.shortcuts" style="margin-right: 5px">
                   <el-button round size="small" :title="v.command" @click.exact="triggerShortcut(v)"
@@ -358,14 +353,15 @@
             </ul>
           </div>
         </el-tab-pane>
-        <el-tab-pane label="安装管理" name="packagemanager">
+        <el-tab-pane label="安装管理" name="installmanager">
           <el-upload ref="upload" class="upload-demo" drag action="/uploads" :on-success="onUpload" multiple>
             <i class="el-icon-upload"></i>
             <div class="el-upload__text">将文件拖到此处，或<em>点击上传</em></div>
             <div class="el-upload__tip" slot="tip">暂时只支持apk的上传</div>
           </el-upload>
           <div class="form-group">
-            <label>URL</label>
+            <label
+              @dblclick='app.installUrl = "https://github.com/appium/java-client/raw/master/src/test/java/io/appium/java_client/ApiDemos-debug.apk"'>URL</label>
             <input type="text" class="form-control form-control-sm" placeholder="http://..." v-model="app.installUrl">
           </div>
           <div>
@@ -380,6 +376,17 @@
         </el-tab-pane>
         <el-tab-pane label="截图" name="screenshot">
           <a :href="screenshotUrl+'?download=screenshot.jpg'" download>下载截图</a>
+        </el-tab-pane>
+        <el-tab-pane label="应用管理" name="packagemanager">
+          <el-button icon="el-icon-refresh" size="small" @click="loadPackages">刷新</el-button>
+          <el-table :data="packages" :default-sort="{prop: 'name'}">
+            <el-table-column sortable prop="name" label="包名"></el-table-column>
+            <el-table-column label="操作">
+              <template slot-scope="scope">
+                <el-button size="small" @click="removePackage(scope.row.name)">卸载</el-button>
+              </template>
+            </el-table-column>
+          </el-table>
         </el-tab-pane>
       </el-tabs>
     </div>
@@ -448,6 +455,7 @@
             message: "",
             launch: true,
           },
+          packages: [],
           userSettings: Object.assign({
             inputName: '',
             inputCommand: '',
@@ -459,6 +467,9 @@
           }, {}),
         }, ret.device),
         methods: {
+          debug() {
+            console.log(...arguments);
+          },
           onUpload(resp, file, files) {
             if (!resp.success) {
               this.$message({
@@ -692,6 +703,11 @@
                 this.loadTerminal()
               }
             }
+            if (tab.name == "packagemanager") {
+              if (!this.packages.length) {
+                this.loadPackages()
+              }
+            }
           },
           loadTerminal() {
             let term;
@@ -750,6 +766,29 @@
             ws.onerror = (evt) => {
               console.log(evt)
             }
+          },
+          loadPackages() {
+            return this.runShell("pm list packages -3").then(ret => {
+              let packages = []
+              ret.output.split(/\r?\n/).forEach(v => {
+                if (v.startsWith("package:")) {
+                  const packageName = v.substr("package:".length)
+                  packages.push({
+                    key: packageName,
+                    name: packageName,
+                  })
+                }
+              })
+              this.packages = packages;
+            })
+          },
+          removePackage(packageName) {
+            return this.runShell(`pm uninstall ${packageName}`).then(() => {
+              const index = this.packages.findIndex((v) => {
+                return v.name == packageName
+              })
+              this.packages.splice(index, 1)
+            })
           },
           openDisplayTouchpad() {
             this.mirrorDisplay()
