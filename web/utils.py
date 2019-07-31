@@ -7,7 +7,7 @@ import time
 import shutil
 from xml.dom import minidom
 
-from apkutils import APK, apkfile
+from apkutils2 import APK, apkfile
 
 
 class Manifest(object):
