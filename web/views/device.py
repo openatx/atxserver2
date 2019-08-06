@@ -128,6 +128,17 @@ class APIDeviceHandler(CorsMixin, BaseRequestHandler):
             "device": data,
         })
 
+    @catch_error_wraps(rdb.errors.ReqlNonExistenceError)
+    async def put(self, udid):
+        if not self.current_user.admin:
+            raise RuntimeError("Update requires admin")
+
+        props = self.get_payload()
+        await db.table("devices").get(udid).update({
+            "department": props['department'],
+        })
+        self.write_json({"success": True, "description": "updated"})
+
 
 class APIDevicePropertiesHandler(CorsMixin, BaseRequestHandler):
     @catch_error_wraps(rdb.errors.ReqlNonExistenceError)
@@ -462,18 +473,28 @@ class D(object):
         source = device2source(device)
         if not source:  # 设备离线了
             return
-
+        
         async def cold_device():
+            from tornado.httpclient import HTTPError
             from tornado.httpclient import AsyncHTTPClient, HTTPRequest
             http_client = AsyncHTTPClient()
             secret = source.get('secret', '')
             if not source.get('url'):
                 await self.update({"colding": False})
-            else:
+                return
+            
+            source_id = source.get("id")
+            from .provider import ProviderHeartbeatWSHandler
+            await ProviderHeartbeatWSHandler.release(source_id, device['udid'])
+
+            try:
                 url = source['url'] + "/cold?" + urllib.parse.urlencode(
                     dict(udid=device['udid'], secret=secret))
                 request = HTTPRequest(url, method="POST", body='')
                 await http_client.fetch(request)
+            except HTTPError as e:
+                logger.error("device [%s] release error: %s", self.udid, e)
+                await self.update({"colding": False})
 
         IOLoop.current().add_callback(cold_device)
 

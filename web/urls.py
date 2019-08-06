@@ -42,7 +42,7 @@ urlpatterns = [
     (r"/api/v1/devices/([^/]+)", APIDeviceHandler), # GET
     (r"/api/v1/devices/([^/]+)/properties", APIDevicePropertiesHandler), # GET, PUT
     (r"/api/v1/user", APIUserHandler), # GET
-    (r"/api/v1/user/devices", APIUserDeviceHandler), # GET, POST
+    (r"/api/v1/user/devices", APIUserDeviceHandler), # GET, POST, DELETE
     (r"/api/v1/user/devices/([^/]+)", APIUserDeviceHandler), # GET
     (r"/api/v1/user/devices/([^/]+)/active", APIUserDeviceActiveHandler), # GET
     (r"/api/v1/user/settings", APIUserSettingsHandler), # GET, PUT

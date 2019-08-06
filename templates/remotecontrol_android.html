@@ -50,6 +50,10 @@
     padding: 0px;
   }
 
+  .color-red {
+    color: red;
+  }
+
   .color-blue {
     color: blue;
   }
@@ -161,8 +165,8 @@
           <i v-else-if="!whatsinput.disabled" class="fas fa-keyboard" style="color: green"></i>
           <i v-else class="fas fa-keyboard" style="color:gray"></i>
         </span>
-        <span>
-          <i @click="hotfix" title="hotfix" class="fas fa-hammer"></i>
+        <span @click="hotfix" class="cursor-pointer">
+          <i title="hotfix" class="fas fa-hammer"></i> 修复旋转
         </span>
       </section>
       <!-- screen body -->
@@ -198,7 +202,7 @@
                 <i class="fas fa-keyboard"></i> 输入框
                 <span class="float-right">
                   <el-tooltip effect="dark" content="修复输入法" placement="top-start">
-                    <i class="fas fa-tools float-right cursor-pointer" @click="fixInputMethod"></i>
+                    <i class="fas fa-tools float-right cursor-pointer" @click="fixInputMethod"> 修复输入法</i>
                   </el-tooltip>
                 </span>
               </div>
@@ -265,11 +269,6 @@
                   <i class="fas fa-wifi"></i>
                   WIFI
                 </button>
-                <button class="btn btn-sm btn-outline-primary"
-                  @click="runShell('am start -n com.tencent.tmgp.sgame/.SGameActivity')">
-                  <i class="fas fa-gamepad"></i>
-                  王者荣耀
-                </button>
                 <hr>
                 <span v-for="v in userSettings.shortcuts" style="margin-right: 5px">
                   <el-button round size="small" :title="v.command" @click.exact="triggerShortcut(v)"
@@ -316,6 +315,9 @@
                       class="fas fa-sync"></i>
                     刷新</button>
                   <button type="button" :disabled="!topApp.packageName" class="btn btn-sm btn-outline-primary"
+                    @click='runShell("am force-stop "+topApp.packageName)'><i class="fas fa-stop-circle"></i>
+                    Kill</button>
+                  <button type="button" :disabled="!topApp.packageName" class="btn btn-sm btn-outline-primary"
                     @click="addTopAppToShortcut"><i class="fas fa-blind"></i> 添加到快捷入口</button>
                 </div>
               </div>
@@ -355,14 +357,15 @@
             </ul>
           </div>
         </el-tab-pane>
-        <el-tab-pane label="安装管理" name="packagemanager">
+        <el-tab-pane label="安装管理" name="installmanager">
           <el-upload ref="upload" class="upload-demo" drag action="/uploads" :on-success="onUpload" multiple>
             <i class="el-icon-upload"></i>
             <div class="el-upload__text">将文件拖到此处，或<em>点击上传</em></div>
             <div class="el-upload__tip" slot="tip">暂时只支持apk的上传</div>
           </el-upload>
           <div class="form-group">
-            <label>URL</label>
+            <label
+              @dblclick='app.installUrl = "https://github.com/appium/java-client/raw/master/src/test/java/io/appium/java_client/ApiDemos-debug.apk"'>URL</label>
             <input type="text" class="form-control form-control-sm" placeholder="http://..." v-model="app.installUrl">
           </div>
           <div>
@@ -377,6 +380,30 @@
         </el-tab-pane>
         <el-tab-pane label="截图" name="screenshot">
           <a :href="screenshotUrl+'?download=screenshot.jpg'" download>下载截图</a>
+        </el-tab-pane>
+        <el-tab-pane label="应用管理" name="packagemanager">
+          <el-button icon="el-icon-refresh" size="small" @click="loadPackages">刷新</el-button>
+          <el-table :data="packages" :default-sort="{prop: 'name'}">
+            <el-table-column sortable prop="label" label="应用">
+              <template slot-scope="scope">
+                <img :src="`${deviceUrl}/packages/${scope.row.name}/icon`"
+                  style="position: absolute; top: 50%; margin: -20px; height: 40px; left: 20px;" alt="icon" />
+                <span v-text=" scope.row.label" style="padding-left: 45px"></span>
+              </template>
+            </el-table-column>
+            <el-table-column sortable prop="name" label="包名"></el-table-column>
+            <el-table-column sortable label="版本号">
+              <template slot-scope="scope" v-if="scope.row.versionName">
+                <span v-text="scope.row.versionName"></span>(<span v-text="scope.row.versionCode"></span>)
+              </template>
+            </el-table-column>
+            <el-table-column label="操作">
+              <template slot-scope="scope">
+                <a class="color-red" href="javascript:void(0)" @click="removePackage(scope.row.name)">卸载</a>
+                <a href="javascript:void(0)" @click="appLaunch(scope.row.name)">启动</a>
+              </template>
+            </el-table-column>
+          </el-table>
         </el-tab-pane>
       </el-tabs>
     </div>
@@ -394,6 +421,13 @@
 <script src="https://cdn.jsdelivr.net/npm/css-element-queries@1.1.1/src/ResizeSensor.min.js"></script>
 <script src="{{static_url('javascripts/imagepool.js')}}"></script>
 <script>
+
+  jQuery.delay = function (ms, value) {
+    var defer = new jQuery.Deferred();
+    setTimeout(function () { defer.resolve(value); }, ms || 0);
+    return defer.promise();
+  };
+
   const udid = "{{udid}}"
   const userEmail = "{{current_user.email}}"
 
@@ -438,6 +472,7 @@
             message: "",
             launch: true,
           },
+          packages: [],
           userSettings: Object.assign({
             inputName: '',
             inputCommand: '',
@@ -449,6 +484,9 @@
           }, {}),
         }, ret.device),
         methods: {
+          debug() {
+            console.log(...arguments);
+          },
           onUpload(resp, file, files) {
             if (!resp.success) {
               this.$message({
@@ -486,6 +524,14 @@
               this.app.finished = true
             })
           },
+          appLaunch(packageName) {
+            $.ajax({
+              url: `${this.deviceUrl}/session/${packageName}`,
+              method: "post"
+            }).then(ret => {
+              console.log(ret)
+            })
+          },
           addTopAppToShortcut() {
             this.$prompt('给 <code>' + this.topApp.packageName + '</code> 起个名字', '快捷方式添加', {
               confirmButtonText: '确定',
@@ -497,24 +543,31 @@
             }).catch(() => {
             })
           },
-          fixInputMethod() {
-            this.$notify.info({
-              title: "输入法",
-              message: "修复中",
-            })
+          fixInputMethod(quite) {
+            if (!quite) {
+              this.$notify.info({
+                title: "输入法",
+                message: "修复中",
+              })
+            }
             const inputMethod = "com.buscode.whatsinput/.WifiInputMethod"
             return this.runShell("ime enable " + inputMethod)
               .then(() => {
                 return this.runShell("ime set " + inputMethod)
               })
+              .then($.delay(1000))
               .then(() => {
                 this.$refs.whatsinput.focus()
                 return this.loadWhatsinput()
               })
               .then(() => {
-                this.$notify.success({ message: "输入法修复完成" })
+                if (!quite) {
+                  this.$notify.success({ message: "输入法修复完成" })
+                }
               }, () => {
-                this.$notify.success({ message: "输入法修复失败，F12查看详情" })
+                if (!quite) {
+                  this.$notify.success({ message: "输入法修复失败，F12查看详情" })
+                }
               })
           },
           loadWhatsinput(callback) {
@@ -535,6 +588,7 @@
                   this.whatsinput.disabled = false
                   setTimeout(() => {
                     this.$refs.whatsinput.focus()
+                    this.$refs.whatsinput.select()
                   }, 1)
                   break;
                 case "InputFinish":
@@ -674,6 +728,11 @@
                 this.loadTerminal()
               }
             }
+            if (tab.name == "packagemanager") {
+              if (!this.packages.length) {
+                this.loadPackages()
+              }
+            }
           },
           loadTerminal() {
             let term;
@@ -732,6 +791,44 @@
             ws.onerror = (evt) => {
               console.log(evt)
             }
+          },
+          loadPackages() {
+            return this.runShell("pm list packages -3").then(ret => {
+              let packages = []
+              ret.output.split(/\r?\n/).forEach(v => {
+                if (v.startsWith("package:")) {
+                  const packageName = v.substr("package:".length)
+                  let item = {
+                    key: packageName,
+                    name: packageName,
+                    label: "",
+                    versionName: "",
+                    versionCode: "",
+                  }
+                  $.getJSON(`${this.deviceUrl}/packages/${packageName}/info`).then(ret => {
+                    if (ret.success && ret.data) {
+                      item.label = ret.data.label
+                      item.versionName = ret.data.versionName
+                      item.versionCode = ret.data.versionCode
+                      console.log(packageName, ret.data)
+                    }
+                  })
+                  packages.push(item)
+                }
+              })
+              this.packages = packages;
+            })
+          },
+          removePackage(packageName) {
+            if (!confirm(`确认卸载 ${packageName} ?`)) {
+              return
+            }
+            return this.runShell(`pm uninstall ${packageName}`).then(() => {
+              const index = this.packages.findIndex((v) => {
+                return v.name == packageName
+              })
+              this.packages.splice(index, 1)
+            })
           },
           openDisplayTouchpad() {
             this.mirrorDisplay()
@@ -1287,6 +1384,8 @@
           this.closeWindowWhenReleased(5000)
 
           this.initClipboardJS()
+
+          this.fixInputMethod(true)
         },
         computed: {
           address() {

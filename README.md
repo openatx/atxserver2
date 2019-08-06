@@ -1,13 +1,9 @@
 ## atxserver2
-移动设备管理平台
+移动设备管理平台(支持Android和iOS), 欢迎加入QQ群交流
 
-**Beta，尝鲜者可提前体验，虽然还有很多没开发的**
+![image-20190619180012756](docs/qq.png)
 
 ![img](static/favicon-dark.png)
-
-## 环境依赖
-- Python3.6+
-- [RethinkDB](https://rethinkdb.com/)
 
 ## 部署方案1 （docker-compose方式）
 代码Clone到本地
@@ -31,7 +27,6 @@ docker-compose up
 
 ```bash
 pip3 install -r requirements.txt
-pip3 install -r requirements-dev.txt  # include the new rethinkdb
 ```
 
 最简单的启动方法 （默认连接的rethinkdb地址 `localhost:28015`)
@@ -75,7 +70,7 @@ python3 main.py
 接下来，进行安卓设备接入。这时需要用到另外一个项目 [atxserver2-android-provider](https://github.com/openatx/atxserver2-android-provider)
 这个项目运行需要Python3.6+和NodeJS
 
-这里我们强烈推荐使用Docker部署，源码部署请参考文档 [atxserver2-android-provider](https://github.com/openatx/atxserver2-android-provider)
+如果你用的是Linux系统，推荐使用Docker部署，其他平台需要用源码部署，具体请参考文档 [atxserver2-android-provider](https://github.com/openatx/atxserver2-android-provider)
 
 ```bash
 SERVER_URL="http://10.0.0.1:4000" # 这个修改成自己的atxserver2地址
@@ -151,6 +146,12 @@ Examples:
 - <https://github.com/mikusjelly/apkutils>
 - <https://github.com/gtsystem/python-remotezip>
 - <https://github.com/willerce/WhatsInput>
+
+## 微信打赏
+以前我一直对打赏这种行为不屑一顾，但真正的收到社区成员千翻百计找到我的打赏码打赏的时候还是很开心，感觉工作得到的人认可，很开心。我也有时候会打赏别人，让激动的心情有了发泄的出口。
+请不要打赏太多，知道了你们的心意就好了。我将会用收到的money通通拿来去楼下咖啡店买咖啡，买饮料。^_^
+
+![wechat](docs/wechat_qrcode.jpg)
 
 ## LICENSE
 [MIT](LICENSE)

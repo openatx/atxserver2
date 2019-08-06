@@ -19,22 +19,14 @@ class ProviderHeartbeatWSHandler(BaseWebSocketHandler):
     providers = {}
 
     @staticmethod
-    async def release(udid: str):
+    async def release(source_id, udid):
         """
         Release device when finished using
         """
-        device = await db.table("devices").get(udid).run()
-        if not device:
+        ws = ProviderHeartbeatWSHandler.providers.get(source_id)
+        if not ws:
             return
-
-        for sid in device.get('sources', {}).keys():
-            ws = ProviderHeartbeatWSHandler.providers.get(sid)
-            if not ws:
-                continue
-            ws.write_message({"command": "release", "udid": udid})
-            break
-        else:
-            logger.warning("device %s source is missing", udid)
+        await ws.write_message({"command": "release", "udid": udid})
 
     def initialize(self):
         self._id = None
@@ -83,8 +75,10 @@ class ProviderHeartbeatWSHandler(BaseWebSocketHandler):
             "success": True,
             "id": self._id,
         }))
+        self.providers[self._id] = self # providers is global variable
         logger.debug("A new provider is online " + req['name'] + " ID:" +
                      self._id)
+
 
     async def _on_update(self, req):
         """
@@ -136,6 +130,7 @@ class ProviderHeartbeatWSHandler(BaseWebSocketHandler):
 
     def on_close(self):
         logger.info("websocket closed: %s", self.request.remote_ip)
+        self.providers.pop(self._id, None)
 
         async def remove_source():
             def inner(q):

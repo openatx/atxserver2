@@ -26,7 +26,8 @@
     <div id="content-wrapper">
         {% block nav %}
         <nav class="navbar sticky-top navbar-expand-lg navbar-dark bg-dark">
-            <div class="container">
+            
+            <div {%block nav_container_class%}class="container"{%end%}>
                 <a class="navbar-brand" href="/">
                     <span class="title">ATXServer2</span></a>
                 </a>
