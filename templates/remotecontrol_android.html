@@ -386,7 +386,7 @@
           <el-table :data="packages" :default-sort="{prop: 'name'}">
             <el-table-column sortable prop="label" label="应用">
               <template slot-scope="scope">
-                <img :src="`${deviceUrl}/packages/${scope.row.name}/icon`"
+                <img :src="`${deviceUrl}/packages/${scope.row.name}/icon`" onerror="this.onerror='';this.src='/static/images/transparent.png'"
                   style="position: absolute; top: 50%; margin: -20px; height: 40px; left: 20px;" alt="icon" />
                 <span v-text=" scope.row.label" style="padding-left: 45px"></span>
               </template>
