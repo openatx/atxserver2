@@ -380,7 +380,7 @@
         </el-tab-pane>
         <el-tab-pane label="文件管理" name="filemanager">
           <div class="filemanagerDiv" :style="canvasStyle" style="overflow-y:auto">
-            <el-button size="mini" type="primary" @click="getPhoneFile('/sdcard/')">返回 sdcard</el-button>
+            <el-button size="mini" type="primary" @click="getPhoneFile('/sdcard')">返回 sdcard</el-button>
             <el-button size="mini" type="primary" @click="getPhoneFile('..')">返回上层</el-button>
             <el-input size="mini" v-model="phoneDir" placeholder="目标目录" :disabled="true">
               <template slot="prepend">当前目录：</template>
@@ -816,7 +816,7 @@
             }
           },
           getPhoneFile(dir) {
-            if (!dir || dir == "/sdcard/") {
+            if (!dir || dir == "/sdcard") {
               this.phoneDir = "/sdcard";
             } else if (dir == "..") {
               if (this.phoneDir.indexOf("/") == this.phoneDir.lastIndexOf("/")){
@@ -829,11 +829,11 @@
             } else {
               this.phoneDir = this.phoneDir + "/" + dir;
             }
-            this.runShell('ls \"' + this.phoneDir + '\"')
+            this.runShell('ls \"' + this.phoneDir + '/\"')
             .done(ret => {
               this.phoneFiles = ret.output.split("\n");
               this.phoneFiles.pop();
-              if (this.phoneFiles[0] == this.phoneDir) {
+              if (this.phoneFiles[0].search("^ls.*Not a directory$") == 0) {
                 this.$message({
                   showClose: true,
                   message: "不是文件夹",
