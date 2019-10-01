@@ -378,6 +378,24 @@
             <small><code v-text="app.packageName"></code></small>
           </p>
         </el-tab-pane>
+        <el-tab-pane label="文件管理" name="filemanager">
+          <div class="filemanagerDiv" :style="canvasStyle" style="overflow-y:auto">
+            <el-button size="mini" type="primary" @click="getPhoneFile('/sdcard')">返回 sdcard</el-button>
+            <el-button size="mini" type="primary" @click="getPhoneFile('..')">返回上层</el-button>
+            <el-input size="mini" v-model="phoneDir" placeholder="目标目录" :disabled="true">
+              <template slot="prepend">当前目录：</template>
+            </el-input>
+            <el-table size="mini" :data="phoneFiles">
+              <el-table-column label="文件名（点击选择文件夹）">
+                <template slot-scope="scope">
+                  <div width="100%" @dblclick="getPhoneFile(`${scope.row}`)">
+                    <span v-text="scope.row"></span>
+                  </div>
+                </template>
+              </el-table-column>
+            </el-table>
+          </div>
+        </el-tab-pane>
         <el-tab-pane label="截图" name="screenshot">
           <a :href="screenshotUrl+'?download=screenshot.jpg'" download>下载截图</a>
         </el-tab-pane>
@@ -482,6 +500,8 @@
               name: '删除',
             }]
           }, {}),
+          phoneFiles: [],
+          phoneDir: "",
         }, ret.device),
         methods: {
           debug() {
@@ -728,6 +748,9 @@
                 this.loadTerminal()
               }
             }
+            if (tab.name == "filemanager") {
+              this.getPhoneFile();
+            }
             if (tab.name == "packagemanager") {
               if (!this.packages.length) {
                 this.loadPackages()
@@ -791,6 +814,34 @@
             ws.onerror = (evt) => {
               console.log(evt)
             }
+          },
+          getPhoneFile(dir) {
+            if (!dir || dir == "/sdcard") {
+              this.phoneDir = "/sdcard";
+            } else if (dir == "..") {
+              if (this.phoneDir.indexOf("/") == this.phoneDir.lastIndexOf("/")){
+                this.phoneDir = "/sdcard";
+              } else {
+                this.phoneDir = this.phoneDir.substr(0, this.phoneDir.lastIndexOf("/"));
+              }
+            } else if (dir == this.phoneDir) {
+              this.phoneDir = dir;
+            } else {
+              this.phoneDir = this.phoneDir + "/" + dir;
+            }
+            this.runShell('ls \"' + this.phoneDir + '/\"')
+            .done(ret => {
+              this.phoneFiles = ret.output.split("\n");
+              this.phoneFiles.pop();
+              if (this.phoneFiles[0].search("^ls.*Not a directory$") == 0) {
+                this.$message({
+                  showClose: true,
+                  message: "不是文件夹",
+                  type: "error"
+                });
+                this.getPhoneFile('..');
+              }
+            });
           },
           loadPackages() {
             return this.runShell("pm list packages -3").then(ret => {
