@@ -1436,7 +1436,8 @@
 
           this.initClipboardJS()
 
-          this.fixInputMethod(true)
+          // Disable WhatsInputMethod to prevent influence UIAutomation
+          // this.fixInputMethod(true)
         },
         computed: {
           address() {
