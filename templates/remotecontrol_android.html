@@ -224,7 +224,9 @@
               <div class="card-body">
                 <dl>
                   <dt>ATX-AGENT地址</dt>
-                  <dd><code v-text="address"></code></dd>
+                  <dd><code v-text="address"></code>
+                    <i :data-clipboard-text="address" class="far fa-copy clipboard-copy cursor-pointer"></i>
+                  </dd>
                   <dt>ADB远程连接</dt>
                   <dd><code v-text="remoteConnectAddr"></code>
                     <i :data-clipboard-text="remoteConnectAddr" class="far fa-copy clipboard-copy cursor-pointer"></i>
