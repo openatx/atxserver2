@@ -381,23 +381,12 @@
               method: "get",
               url: this.path2url("/session/" + this.session.id + "/wda/alert/buttons")
             }).then(ret => {
-              switch (ret.status) {
-                case 0:
-                  this.alert.buttons = ret.value
-                  this.$nextTick(() => {
-                    this.alert.visible = true
-                  })
-                  break;
-                case 1:
-                  this.$alert(ret.value)
-                  break;
-                case 27:
-                  this.$alert("未检测到系统弹窗")
-                  break;
-                default:
-                  this.$alert("未知异常，打开开发者选项查看问题")
-                  console.error(ret)
-              }
+              this.alert.buttons = ret.value
+                this.$nextTick(() => {
+                  this.alert.visible = true
+                })
+                // this.$alert("未检测到系统弹窗")
+                // this.$alert("未知异常，打开开发者选项查看问题
             }).always(() => {
               this.alert.loading = false
             })

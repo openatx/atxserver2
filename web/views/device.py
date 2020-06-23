@@ -376,7 +376,7 @@ class D(object):
     async def update(self, data: dict):
         return await db.table("devices").get(self.udid).update(data)
 
-    async def acquire(self, email: str, idle_timeout: int = 10 * 60):
+    async def acquire(self, email: str, idle_timeout: int = 20 * 60):
         """
         Raises:
             AcquireError
