@@ -365,9 +365,11 @@
               method: "post",
               url: this.path2url("/session"),
               data: JSON.stringify({
-                desiredCapabilities: {
-                  bundleId: bundleId,
-                  shouldWaitForQuiescence: true,
+                capabilities: {
+                  alwaysMatch: {
+                    bundleId: bundleId,
+                    shouldWaitForQuiescence: true,
+                  }
                 }
               })
             }).then(ret => {
@@ -382,11 +384,11 @@
               url: this.path2url("/session/" + this.session.id + "/wda/alert/buttons")
             }).then(ret => {
               this.alert.buttons = ret.value
-                this.$nextTick(() => {
-                  this.alert.visible = true
-                })
-                // this.$alert("未检测到系统弹窗")
-                // this.$alert("未知异常，打开开发者选项查看问题
+              this.$nextTick(() => {
+                this.alert.visible = true
+              })
+              // this.$alert("未检测到系统弹窗")
+              // this.$alert("未知异常，打开开发者选项查看问题
             }).always(() => {
               this.alert.loading = false
             })
@@ -511,12 +513,25 @@
               }, 500)
             })
           },
+          getSessionId() {
+            return $.ajax({
+              method: "post",
+              url: this.path2url("/session"),
+              data: '{"capabilities": {}}',
+            }).then(ret => {
+              return ret.sessionId;
+            })
+          },
           hotfix() {
             return $.ajax({
               url: this.path2url("/status")
             }).then(ret => {
-              this.session.id = ret.sessionId
-            }).then(() => {
+              if (ret.sessionId) {
+                return ret.sessionId
+              }
+              return this.getSessionId()
+            }).then((sessionId) => {
+              this.session.id = sessionId;
               return $.ajax({
                 url: this.path2url("/session/" + this.session.id + "/window/size")
               })
