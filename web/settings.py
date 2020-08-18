@@ -14,3 +14,9 @@ AUTH_BACKENDS = {
         "endpoint": "https://login.netease.com/openid/"
     }
 }
+
+GITHUB = {
+    "client_id": "client_id",
+    "client_secret": "client-secret",
+    "redirect_uri": "http://your-web-site/login"
+}

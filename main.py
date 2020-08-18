@@ -13,7 +13,7 @@ from tornado.log import enable_pretty_logging
 
 from web.database import db
 from web.entry import make_app
-from web.views import OpenIdLoginHandler, SimpleLoginHandler
+from web.views import OpenIdLoginHandler, SimpleLoginHandler, GithubLoginHandler
 
 
 def machine_ip():
@@ -30,6 +30,7 @@ def main():
     _auth_handlers = {
         "simple": SimpleLoginHandler,
         "openid": OpenIdLoginHandler,
+        "github": GithubLoginHandler
     }
 
     parser = argparse.ArgumentParser(
@@ -41,7 +42,8 @@ def main():
                         help='open debug log, and open hot reload')
     parser.add_argument('--auth', type=str, default='simple',
                         choices=_auth_handlers.keys(), help='authentication method')
-    parser.add_argument("--no-xheaders", action="store_true", help="disable support for X-Real-Ip/X-Forwarded-For")
+    parser.add_argument("--no-xheaders", action="store_true",
+                        help="disable support for X-Real-Ip/X-Forwarded-For")
     parser.add_argument(
         '--auth-conf-file', type=argparse.FileType('r'), help='authentication config file')
     # yapf: enable
