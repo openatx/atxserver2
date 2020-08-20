@@ -5,5 +5,5 @@ WORKDIR /app
 
 RUN pip install -r requirements.txt
 
-ENTRYPOINT [ "scripts/wait-for-db.sh" ]
-CMD ["python", "main.py"]
+ENTRYPOINT [ "bash", "scripts/wait-for-db.sh" ]
+CMD ["python", "-u", "main.py"]
