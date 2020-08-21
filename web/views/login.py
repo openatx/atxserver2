@@ -52,7 +52,7 @@ class GithubLoginHandler(BaseRequestHandler, GithubOAuth2Mixin):
     async def get(self):
         if self.get_argument('code', False):
             access = await self.get_authenticated_user(
-                redirect_uri='http://192.168.99.112/login',
+                redirect_uri=GITHUB['redirect_uri'],
                 client_id=GITHUB['client_id'],
                 client_secret=GITHUB['client_secret'],
                 code=self.get_argument('code'))
@@ -71,7 +71,7 @@ class GithubLoginHandler(BaseRequestHandler, GithubOAuth2Mixin):
         # e.g. set_secure_cookie.
         else:
             await self.authorize_redirect(
-                redirect_uri='http://192.168.99.112/login',
+                redirect_uri=GITHUB['redirect_uri'],
                 client_id=GITHUB['client_id'],
                 scope=['user'],
                 response_type='code',
