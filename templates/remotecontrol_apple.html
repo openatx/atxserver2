@@ -651,15 +651,16 @@
             }
 
             let wdaSwipe = (fromX, fromY, toX, toY, duration) => {
-              return $.ajax({
-                url: this.path2url("/session/" + this.session.id + "/wda/dragfromtoforduration"),
+              return $.ajax({ // 经过测试，相同移动轨迹，wda/touch/perform 比 wda/dragfromtoforduration 响应速度快不少，整体操作iPhoneX上从1.3s+缩短到0.5s内
+                url: this.path2url("/session/" + this.session.id + "/wda/touch/perform"),
                 method: "POST",
                 data: JSON.stringify({
-                  fromX: fromX,
-                  fromY: fromY,
-                  toX: toX,
-                  toY: toY,
-                  duration: duration || 0.01, // seconds
+                  actions: [
+                    {action: "press", options: {x: fromX, y: fromY}},
+                    {action: "wait", options: {ms: duration > 17 ? duration : 100 }},// 必须大于17ms，否则 wda 会没反应。日常使用一般100毫秒比较正常
+                    {action: "moveTo", options: {x: toX, y: toY}},
+                    {action:"release", options: {}}
+                  ]
                 })
               })
             }
@@ -682,11 +683,11 @@
                 } else {
                   // long click
                   console.log("touchHold", x, y)
-                  return wdaSwipe(startX, startY, x, y, duration / 1000)
+                  return wdaSwipe(startX, startY, x, y, duration)
                 }
               } else {
                 console.log("swipe:", mousePos.down, "to", { x, y }, duration)
-                return wdaSwipe(startX, startY, x, y, 0.01)
+                return wdaSwipe(startX, startY, x, y, 100)
               }
             }
 
