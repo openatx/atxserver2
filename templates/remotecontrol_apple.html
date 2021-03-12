@@ -540,6 +540,13 @@
                 this.display.width = ret.value.width;
                 this.display.height = ret.value.height;
               }
+
+              // 设定帧率为30
+              $.ajax({
+                method: "post",
+                url: this.path2url("/session/" + this.session.id + "/appium/settings"),
+                data: '{"settings": {"mjpegServerFramerate": 30}}',
+              })
             })
           },
           stopUsing() {
