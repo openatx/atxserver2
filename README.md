@@ -38,6 +38,7 @@ python3 main.py
 # 指定认证方式
 python3 main.py --auth simple # 默认是一个非常simple的认证，输入邮箱就可以
 python3 main.py --auth openid # 网易内部使用
+python3 main.py --auth github # github 认证, 需要在 `settings.py` 里面配置 `client_id` 和 `client_secret` 相关信息
 # 其他的认证方式还有待添加，非常欢迎PR
 
 # 设置监听端口
