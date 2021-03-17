@@ -28,6 +28,10 @@ class DB(object):
         "groups": {
             "name": "groups",
         },
+        "location": {
+            "name": "location",
+            "primary_key": "providerIP",
+        }
     }
 
     def __init__(self, db='demo', **kwargs):
@@ -211,13 +215,18 @@ class TableHelper(object):
                 results.append(await cursor.next())
             return results
 
-    async def save(self, data: dict, id=None) -> dict:
+    async def save(self, data: dict, id=None, excludes=None) -> dict:
         """Update when exists or insert it
 
         Returns:
             dict which will contains "id"
         """
         data = data.copy()
+
+        if excludes:
+            for item in excludes:
+                data.pop(item, None)
+
         if id:
             data[self.primary_key] = id
 
@@ -231,7 +240,6 @@ class TableHelper(object):
 
         # add some data
         data['createdAt'] = time_now()
-
         ret = await self.insert(data)
         assert ret['errors'] == 0
 

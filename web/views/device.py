@@ -128,17 +128,6 @@ class APIDeviceHandler(CorsMixin, BaseRequestHandler):
             "device": data,
         })
 
-    @catch_error_wraps(rdb.errors.ReqlNonExistenceError)
-    async def put(self, udid):
-        if not self.current_user.admin:
-            raise RuntimeError("Update requires admin")
-
-        props = self.get_payload()
-        await db.table("devices").get(udid).update({
-            "department": props['department'],
-        })
-        self.write_json({"success": True, "description": "updated"})
-
 
 class APIDevicePropertiesHandler(CorsMixin, BaseRequestHandler):
     @catch_error_wraps(rdb.errors.ReqlNonExistenceError)

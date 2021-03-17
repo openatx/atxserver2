@@ -45,6 +45,52 @@ class APIAdminListHandler(AdminRequestHandler):
             "data": ret,
         })
 
+class APILocationListHandler(AdminRequestHandler):
+    async def get(self):
+        """
+        Response example:
+        {
+            "success": true,
+            "location": [{
+                "location": "",
+                "providerIP" : ""
+                ...
+            }]
+        }
+        """
+        ret = await db.table("location").all()
+        self.write_json({
+            "success": True,
+            "location": ret,
+        })
+
+    async def put(self, provider_ip):
+        """
+        """
+        payload = self.get_payload()
+        ret = await db.table("location") .get(provider_ip).update(payload)  # yapf: disable
+        self.write_json({
+            "success": True,
+            "location": ret,
+        })
+
+    async def post(self):
+        payload = self.get_payload()
+        ret = await db.table("location").save(payload)  # yapf: disable
+        # ret = await db.table("location").get(payload["location"]).update({"admin": True}) # yapf: disable
+        self.write_json({
+            "success": True,
+            "data": ret,
+        })
+
+    async def delete(self, providerIP):
+        """
+        """
+        ret = await db.table("location").get(providerIP).delete()  # yapf: disable
+        self.write_json({
+            "success": True,
+            "location": ret,
+        })
 
 class APIUserHandler(AuthRequestHandler):
     async def get(self):
