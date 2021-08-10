@@ -2,7 +2,7 @@
 #
 from concurrent.futures import ThreadPoolExecutor
 from .base import BaseRequestHandler, AuthRequestHandler
-from .login import OpenIdLoginHandler, SimpleLoginHandler
+from .login import OpenIdLoginHandler, SimpleLoginHandler, GithubLoginHandler
 
 
 class LogoutHandler(BaseRequestHandler):
