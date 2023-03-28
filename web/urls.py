@@ -9,7 +9,8 @@ from .views.device import (AndroidDeviceControlHandler, APIDeviceHandler,
                            APIDeviceListHandler, APIDevicePropertiesHandler,
                            APIUserDeviceActiveHandler, APIUserDeviceHandler,
                            AppleDeviceListHandler, DeviceChangesWSHandler,
-                           DeviceItemHandler, DeviceListHandler)
+                           DeviceItemHandler, DeviceListHandler, AndroidProviderProxyHandler,
+                           AndroidDeviceWSProxyHandler, AndroidDeviceAtxAgentProxyHandler)
 from .views.group import (APIGroupUserListHandler, APIUserGroupListHandler,
                           UserGroupCreateHandler)
 from .views.provider import ProviderHeartbeatWSHandler
@@ -35,6 +36,9 @@ urlpatterns = [
 
     (r"/websocket/devicechanges", DeviceChangesWSHandler),
     (r"/websocket/heartbeat", ProviderHeartbeatWSHandler),
+    (r"/websocket/atxagent/(minicap|term|minitouch)", AndroidDeviceWSProxyHandler),
+    (r"/websocket/whatsinput", AndroidDeviceWSProxyHandler),
+
     # For compability of atx-server-1
     (r"/list", make_redirect_handler("/api/v1/devices")),
     # RESP API
@@ -47,6 +51,9 @@ urlpatterns = [
     (r"/api/v1/user/devices/([^/]+)/active", APIUserDeviceActiveHandler), # GET
     (r"/api/v1/user/settings", APIUserSettingsHandler), # GET, PUT
     (r"/api/v1/admins", APIAdminListHandler), # GET, POST
+    (r"/api/v1/atxagent/(.*)", AndroidDeviceAtxAgentProxyHandler),
+    (r"/api/v1/provider/(app/install|cold)", AndroidProviderProxyHandler),
+
     ## Group API
     # (r"/api/v1/user/groups/([^/]+)", APIUserGroupHandler), # GET, POST, DELETE  TODO(ssx)
     (r"/api/v1/user/groups", APIUserGroupListHandler), # GET, POST

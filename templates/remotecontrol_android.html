@@ -399,14 +399,14 @@
           </div>
         </el-tab-pane>
         <el-tab-pane label="截图" name="screenshot">
-          <a :href="screenshotUrl+'?download=screenshot.jpg'" download>下载截图</a>
+          <a :href="screenshotAtxAgentUrl" download>下载截图</a>
         </el-tab-pane>
         <el-tab-pane label="应用管理" name="packagemanager">
           <el-button icon="el-icon-refresh" size="small" @click="loadPackages">刷新</el-button>
           <el-table :data="packages" :default-sort="{prop: 'name'}">
             <el-table-column sortable prop="label" label="应用">
               <template slot-scope="scope">
-                <img :src="`${deviceUrl}/packages/${scope.row.name}/icon`" onerror="this.onerror='';this.src='/static/images/transparent.png'"
+                <img :src="`${formatAtxAgentUrl('/packages/'+scope.row.name+'/icon')}`" onerror="this.onerror='';this.src='/static/images/transparent.png'"
                   style="position: absolute; top: 50%; margin: -20px; height: 40px; left: 20px;" alt="icon" />
                 <span v-text=" scope.row.label" style="padding-left: 45px"></span>
               </template>
@@ -527,7 +527,7 @@
 
             $.ajax({
               method: "post",
-              url: this.source.url + "/app/install?udid=" + this.udid,
+              url:  this.formatProviderUrl('/app/install') + "&udid=" + this.udid,
               data: {
                 url: this.app.installUrl,
                 launch: this.app.launch,
@@ -546,9 +546,15 @@
               this.app.finished = true
             })
           },
+          formatAtxAgentUrl(path) {
+            return `${this.deviceAtxAgentUrl}${path}?host=${this.deviceHost}&port=${this.devicePort}`
+          },
+          formatProviderUrl(path) {
+            return `${this.deviceProviderUrl}${path}?host=${this.providerHost}&port=${this.providerPort}`
+          },
           appLaunch(packageName) {
             $.ajax({
-              url: `${this.deviceUrl}/session/${packageName}`,
+              url:  this.formatAtxAgentUrl(`/session/${packageName}`),
               method: "post"
             }).then(ret => {
               console.log(ret)
@@ -593,9 +599,8 @@
               })
           },
           loadWhatsinput(callback) {
-            console.log(this.whatsInputUrl)
             let defer = $.Deferred()
-            let ws = new WebSocket(this.whatsInputUrl)
+            let ws = new WebSocket(this.whatsInputWSUrl)
             this.websockets.winput = ws;
             ws.onopen = (ev) => {
               defer.resolve()
@@ -702,7 +707,7 @@
             // })
             $.ajax({
               method: "get",
-              url: this.deviceUrl + "/info/rotation"
+              url: this.formatAtxAgentUrl("/info/rotation")
             }).done(ret => {
               this.$notify({
                 message: "Rotation updated",
@@ -730,7 +735,7 @@
           runShell(command) {
             return $.ajax({
               method: "get",
-              url: this.deviceUrl + "/shell",
+              url: this.formatAtxAgentUrl("/shell"),
               data: {
                 "command": command,
               },
@@ -761,7 +766,7 @@
           },
           loadTerminal() {
             let term;
-            let ws = new WebSocket("ws://" + this.address + "/term");
+            let ws = new WebSocket(this.deviceAtxAgentTermWSUrl);
             ws.binaryType = "arraybuffer"
 
             function ab2str(buf) {
@@ -858,7 +863,7 @@
                     versionName: "",
                     versionCode: "",
                   }
-                  $.getJSON(`${this.deviceUrl}/packages/${packageName}/info`).then(ret => {
+                  $.getJSON(this.formatAtxAgentUrl(`/packages/${packageName}/info`)).then(ret => {
                     if (ret.success && ret.data) {
                       item.label = ret.data.label
                       item.versionName = ret.data.versionName
@@ -892,7 +897,7 @@
             this.closeSyncTouchpad()
           },
           mirrorDisplay() {
-            let ws = new WebSocket(this.deviceUrl.replace(/^http/, "ws") + '/minicap');
+            let ws = new WebSocket(`${this.deviceAtxAgentCapWSUrl}`);
             this.websockets.screen = ws;
 
             ws.onopen = (ev) => {
@@ -941,7 +946,7 @@
               bounds: {}
             }
 
-            let ws = new WebSocket("ws://" + this.address + "/minitouch")
+            let ws = new WebSocket(this.deviceAtxAgentTouchWSUrl)
             this.websockets.touchpad = ws
 
             ws.onopen = (ret) => {
@@ -1445,20 +1450,51 @@
           address() {
             return this.source.atxAgentAddress
           },
-          deviceUrl() {
-            return "http://" + this.address
+          providerHost() {
+            return this.source.url.split('/')[2].split(':')[0]
           },
-          remoteTerminal() {
-            return "http://" + this.address + "/term"
+          providerPort() {
+            return this.source.url.split(':')[2]
           },
-          screenshotUrl() {
-            return "http://" + this.address + "/screenshot/0"
+          deviceHost() {
+            return this.address.split(':')[0]
+          },
+          devicePort() {
+            return this.address.split(':')[1]
+          },
+          deviceWhatsInputPort() {
+            return this.source.whatsInputAddress.split(':')[1]
+          },
+          deviceAtxAgentCapWSUrl() {
+            var host = window.location.host;
+            return `ws://${host}/websocket/atxagent/minicap?host=${this.deviceHost}&port=${this.devicePort}`
+          },
+          deviceAtxAgentTouchWSUrl() {
+            var host = window.location.host;
+            return `ws://${host}/websocket/atxagent/minitouch?host=${this.deviceHost}&port=${this.devicePort}`
+          },
+          deviceAtxAgentTermWSUrl() {
+            var host = window.location.host;
+            return `ws://${host}/websocket/atxagent/term?host=${this.deviceHost}&port=${this.devicePort}`
+          },
+          deviceAtxAgentUrl() {
+            var host = window.location.host;
+            return "http://" + host + '/api/v1/atxagent'
+          },
+          deviceProviderUrl() {
+            var host = window.location.host;
+            return `http://${host}/api/v1/provider`
+          },
+          screenshotAtxAgentUrl() {
+            var host = window.location.host;
+            return `http://${host}/api/v1/atxagent/screenshot/0?host=${this.deviceHost}&port=${this.devicePort}`
           },
           remoteConnectAddr() {
             return "adb connect " + this.source.remoteConnectAddress
           },
-          whatsInputUrl() {
-            return "ws://" + this.source.whatsInputAddress
+          whatsInputWSUrl() {
+            var host = window.location.host;
+            return `ws://${host}/websocket/whatsinput?host=${this.deviceHost}&port=${this.deviceWhatsInputPort}`
           },
           displayLinked() {
             return this.websockets.screen !== null;
