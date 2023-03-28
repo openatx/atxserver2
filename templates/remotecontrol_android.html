@@ -596,9 +596,8 @@
               })
           },
           loadWhatsinput(callback) {
-            console.log(this.whatsInputUrl)
             let defer = $.Deferred()
-            let ws = new WebSocket(this.whatsInputUrl)
+            let ws = new WebSocket(this.whatsInputWSUrl)
             this.websockets.winput = ws;
             ws.onopen = (ev) => {
               defer.resolve()
@@ -1454,6 +1453,9 @@
           devicePort() {
             return this.address.split(':')[1]
           },
+          deviceWhatsInputPort() {
+            return this.source.whatsInputAddress.split(':')[1]
+          },
           deviceAtxAgentCapWSUrl() {
             var host = window.location.host;
             return `ws://${host}/websocket/atxagent/minicap?host=${this.deviceHost}&port=${this.devicePort}`
@@ -1477,8 +1479,9 @@
           remoteConnectAddr() {
             return "adb connect " + this.source.remoteConnectAddress
           },
-          whatsInputUrl() {
-            return "ws://" + this.source.whatsInputAddress
+          whatsInputWSUrl() {
+            var host = window.location.host;
+            return `ws://${host}/websocket/whatsinput?host=${this.deviceHost}&port=${this.deviceWhatsInputPort}`
           },
           displayLinked() {
             return this.websockets.screen !== null;

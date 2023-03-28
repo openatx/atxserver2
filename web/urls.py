@@ -10,7 +10,7 @@ from .views.device import (AndroidDeviceControlHandler, APIDeviceHandler,
                            APIUserDeviceActiveHandler, APIUserDeviceHandler,
                            AppleDeviceListHandler, DeviceChangesWSHandler,
                            DeviceItemHandler, DeviceListHandler,
-                           DeviceAtxAgentWSHandler, AndroidDeviceAtxAgentProxyHandler)
+                           AndroidDeviceWSProxyHandler, AndroidDeviceAtxAgentProxyHandler)
 from .views.group import (APIGroupUserListHandler, APIUserGroupListHandler,
                           UserGroupCreateHandler)
 from .views.provider import ProviderHeartbeatWSHandler
@@ -36,7 +36,8 @@ urlpatterns = [
 
     (r"/websocket/devicechanges", DeviceChangesWSHandler),
     (r"/websocket/heartbeat", ProviderHeartbeatWSHandler),
-    (r"/websocket/atxagent/(minicap|term|minitouch)", DeviceAtxAgentWSHandler),
+    (r"/websocket/atxagent/(minicap|term|minitouch)", AndroidDeviceWSProxyHandler),
+    (r"/websocket/whatsinput", AndroidDeviceWSProxyHandler),
 
     # For compability of atx-server-1
     (r"/list", make_redirect_handler("/api/v1/devices")),
