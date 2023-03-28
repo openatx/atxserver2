@@ -9,7 +9,7 @@ from .views.device import (AndroidDeviceControlHandler, APIDeviceHandler,
                            APIDeviceListHandler, APIDevicePropertiesHandler,
                            APIUserDeviceActiveHandler, APIUserDeviceHandler,
                            AppleDeviceListHandler, DeviceChangesWSHandler,
-                           DeviceItemHandler, DeviceListHandler,
+                           DeviceItemHandler, DeviceListHandler, AndroidProviderProxyHandler,
                            AndroidDeviceWSProxyHandler, AndroidDeviceAtxAgentProxyHandler)
 from .views.group import (APIGroupUserListHandler, APIUserGroupListHandler,
                           UserGroupCreateHandler)
@@ -52,6 +52,8 @@ urlpatterns = [
     (r"/api/v1/user/settings", APIUserSettingsHandler), # GET, PUT
     (r"/api/v1/admins", APIAdminListHandler), # GET, POST
     (r"/api/v1/atxagent/(.*)", AndroidDeviceAtxAgentProxyHandler),
+    (r"/api/v1/provider/(app/install|cold)", AndroidProviderProxyHandler),
+
     ## Group API
     # (r"/api/v1/user/groups/([^/]+)", APIUserGroupHandler), # GET, POST, DELETE  TODO(ssx)
     (r"/api/v1/user/groups", APIUserGroupListHandler), # GET, POST

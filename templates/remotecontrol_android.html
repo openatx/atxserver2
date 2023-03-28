@@ -527,7 +527,7 @@
 
             $.ajax({
               method: "post",
-              url: this.source.url + "/app/install?udid=" + this.udid,
+              url:  this.formatProviderUrl('/app/install') + "&udid=" + this.udid,
               data: {
                 url: this.app.installUrl,
                 launch: this.app.launch,
@@ -548,6 +548,9 @@
           },
           formatAtxAgentUrl(path) {
             return `${this.deviceAtxAgentUrl}${path}?host=${this.deviceHost}&port=${this.devicePort}`
+          },
+          formatProviderUrl(path) {
+            return `${this.deviceProviderUrl}${path}?host=${this.providerHost}&port=${this.providerPort}`
           },
           appLaunch(packageName) {
             $.ajax({
@@ -1447,6 +1450,12 @@
           address() {
             return this.source.atxAgentAddress
           },
+          providerHost() {
+            return this.source.url.split('/')[2].split(':')[0]
+          },
+          providerPort() {
+            return this.source.url.split(':')[2]
+          },
           deviceHost() {
             return this.address.split(':')[0]
           },
@@ -1471,6 +1480,10 @@
           deviceAtxAgentUrl() {
             var host = window.location.host;
             return "http://" + host + '/api/v1/atxagent'
+          },
+          deviceProviderUrl() {
+            var host = window.location.host;
+            return `http://${host}/api/v1/provider`
           },
           screenshotAtxAgentUrl() {
             var host = window.location.host;

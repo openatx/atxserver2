@@ -560,7 +560,7 @@ class AndroidDeviceAtxAgentProxyHandler(CheckMixin, AuthRequestHandler):
                 "success": False,
                 "description": "Missing host and port"
             })
-        arguments = self.request.arguments # 内部是List[bytes]格式
+        arguments = self.request.query_arguments # 内部是List[bytes]格式
         arguments.pop('host', None)
         arguments.pop('port', None)
         params = {name: self.get_argument(name) for name in arguments}
@@ -569,7 +569,7 @@ class AndroidDeviceAtxAgentProxyHandler(CheckMixin, AuthRequestHandler):
                 url = f'http://{host}:{port}/{args[0]}?{urlencode(params)}'
             else:
                 url = f'http://{host}:{port}/{args[0]}'
-            logger.info(f'Proxy http from {self.request.uri}  <--> {url}')
+            logger.info(f'Forward http {method} from {self.request.uri}  <--> {url}')
             headers = self.request.headers
             response = await tornado.httpclient.AsyncHTTPClient().fetch(
                 url, method=method, headers=headers, body=self.request.body, allow_nonstandard_methods=True, **kwargs)
@@ -585,6 +585,9 @@ class AndroidDeviceAtxAgentProxyHandler(CheckMixin, AuthRequestHandler):
 
     async def post(self, *args, **kwargs):
         await self.do_proxy('POST', *args, **kwargs)
+
+
+AndroidProviderProxyHandler = AndroidDeviceAtxAgentProxyHandler
 
 
 class AndroidDeviceWSProxyHandler(CheckMixin, tornado.websocket.WebSocketHandler):
@@ -607,7 +610,7 @@ class AndroidDeviceWSProxyHandler(CheckMixin, tornado.websocket.WebSocketHandler
             target_url = f'{schema}://{host}:{port}/{args[0]}'
         else:
             target_url = f'{schema}://{host}:{port}/'
-        logger.info(f'Proxy websocket from {self.request.uri} <--> {target_url}')
+        logger.info(f'Forward websocket from {self.request.uri} <--> {target_url}')
         self._client = await to_asyncio_future(
             tornado.websocket.websocket_connect(target_url, on_message_callback=self.on_target_message))
 
