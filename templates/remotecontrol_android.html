@@ -196,192 +196,198 @@
     <div class="col-sm height-auto-fill" style="min-height: 0; overflow-y: auto">
       <el-tabs v-model="activeName" @tab-click="handleTabClick">
         <el-tab-pane label="常用" name="common">
-          <div class="card-columns" ref="commonContainer">
-            <div class="card">
-              <div class="card-header">
-                <i class="fas fa-keyboard"></i> 输入框
-                <span class="float-right">
-                  <el-tooltip effect="dark" content="修复输入法" placement="top-start">
-                    <i class="fas fa-tools float-right cursor-pointer" @click="fixInputMethod"> 修复输入法</i>
-                  </el-tooltip>
-                </span>
-              </div>
-              <div class="card-body">
-                <textarea ref="whatsinput" :disabled="whatsinput.disabled"
-                  :placeholder="whatsinput.disabled ? 'Input disabled' : 'Input something ...'" class="form-control"
-                  v-model="whatsinput.text" @input="sendInputText" @keydown.tab.exact.prevent="sendInputKey('tab')"
-                  @keydown.enter.exact.prevent="sendInputKey('enter')"></textarea>
-                <span style="text-align: right; font-size: 0.74em; color: gray; margin-bottom: 0px">
-                  <code>Shift+Enter</code> to start a new line, <code>Enter</code> to
-                  send</span>
-              </div>
-            </div>
-
-            <div class="card">
-              <div class="card-header">
-                <i class="far fa-address-card"></i> 常用地址
-              </div>
-              <div class="card-body">
-                <dl>
-                  <dt>ATX-AGENT地址</dt>
-                  <dd><code v-text="address"></code>
-                    <i :data-clipboard-text="address" class="far fa-copy clipboard-copy cursor-pointer"></i>
-                  </dd>
-                  <dt>ADB远程连接</dt>
-                  <dd><code v-text="remoteConnectAddr"></code>
-                    <i :data-clipboard-text="remoteConnectAddr" class="far fa-copy clipboard-copy cursor-pointer"></i>
-                  </dd>
-                </dl>
-              </div>
-            </div>
-            <!-- browser -->
-            <div class="card">
-              <div class="card-header">
-                <i class="fa fa-globe"></i>
-                浏览器打开URL
-              </div>
-              <div class="card-body">
-                <textarea class="form-control" placeholder="在这里输入URL" rows=2 v-model="browserUrl"
-                  @keyup.enter="openBrowser(browserUrl)"></textarea>
-                <div style="padding-top: 5px">
-                  <button type="button" class="btn btn-primary btn-sm float-right"
-                    @click='openBrowser(browserUrl)'>打开</button>
+          <div class="rightDiv" :style="pageStyle" style="overflow-y:auto">
+            <div class="card-columns" ref="commonContainer">
+              <div class="card">
+                <div class="card-header">
+                  <i class="fas fa-keyboard"></i> 输入框
+                  <span class="float-right">
+                    <el-tooltip effect="dark" content="修复输入法" placement="top-start">
+                      <i class="fas fa-tools float-right cursor-pointer" @click="fixInputMethod"> 修复输入法</i>
+                    </el-tooltip>
+                  </span>
+                </div>
+                <div class="card-body">
+                  <textarea ref="whatsinput" :disabled="whatsinput.disabled"
+                    :placeholder="whatsinput.disabled ? 'Input disabled' : 'Input something ...'" class="form-control"
+                    v-model="whatsinput.text" @input="sendInputText" @keydown.tab.exact.prevent="sendInputKey('tab')"
+                    @keydown.enter.exact.prevent="sendInputKey('enter')"></textarea>
+                  <span style="text-align: right; font-size: 0.74em; color: gray; margin-bottom: 0px">
+                    <code>Shift+Enter</code> to start a new line, <code>Enter</code> to
+                    send</span>
                 </div>
               </div>
-            </div>
 
-            <div class="card">
-              <div class="card-header">
-                <i class="fas fa-blind"></i>
-                快捷入口
+              <div class="card">
+                <div class="card-header">
+                  <i class="far fa-address-card"></i> 常用地址
+                </div>
+                <div class="card-body">
+                  <dl>
+                    <dt>ATX-AGENT地址</dt>
+                    <dd><code v-text="address"></code>
+                      <i :data-clipboard-text="address" class="far fa-copy clipboard-copy cursor-pointer"></i>
+                    </dd>
+                    <dt>ADB远程连接</dt>
+                    <dd><code v-text="remoteConnectAddr"></code>
+                      <i :data-clipboard-text="remoteConnectAddr" class="far fa-copy clipboard-copy cursor-pointer"></i>
+                    </dd>
+                  </dl>
+                </div>
               </div>
-              <div class="card-body">
-                <button class="btn btn-sm btn-sm btn-outline-primary"
-                  @click="runShell('am start -a android.settings.SETTINGS')">
-                  <i class="fas fa-cog"></i>
-                  Settings
-                </button>
-                <button class="btn btn-sm btn-outline-primary"
-                  @click="runShell('am start -a com.android.settings.APPLICATION_DEVELOPMENT_SETTINGS')">
-                  <i class="fas fa-wrench"></i>
-                  开发者
-                </button>
-                <button class="btn btn-sm btn-outline-primary"
-                  @click="runShell('am start -a android.settings.WIRELESS_SETTINGS')">
-                  <i class="fas fa-wifi"></i>
-                  WIFI
-                </button>
-                <hr>
-                <span v-for="v in userSettings.shortcuts" style="margin-right: 5px">
-                  <el-button round size="small" :title="v.command" @click.exact="triggerShortcut(v)"
-                    @click.alt.exact="removeShortcut(v)">{{!v.name}}</el-button>
-                </span>
-                <el-popover placement="right" width="400" trigger="click" v-model="userSettings.visible">
-                  <div>
-                    <h4>增加快捷命令</h4>
-                    <div class="form-group">
-                      <label>名称</label>
-                      <input class="form-control" v-model="userSettings.inputName" type="text">
-                    </div>
-                    <div class="form-group">
-                      <label>SHELL命令</label>
-                      <input class="form-control" v-model="userSettings.inputCommand" type="text">
-                    </div>
-                    <el-button size="small" @click="addShortcut(userSettings.inputName, userSettings.inputCommand)">
-                      添加
-                    </el-button>
+              <!-- browser -->
+              <div class="card">
+                <div class="card-header">
+                  <i class="fa fa-globe"></i>
+                  浏览器打开URL
+                </div>
+                <div class="card-body">
+                  <textarea class="form-control" placeholder="在这里输入URL" rows=2 v-model="browserUrl"
+                    @keyup.enter="openBrowser(browserUrl)"></textarea>
+                  <div style="padding-top: 5px">
+                    <button type="button" class="btn btn-primary btn-sm float-right"
+                      @click='openBrowser(browserUrl)'>打开</button>
                   </div>
-                  <el-button title="Alt+左键 删除" size="small" round slot="reference"><i class="fas fa-plus"></i>
-                  </el-button>
-                </el-popover>
-                <!-- <div style="color: gray; font-size: 0.6em; text-align: right">Alt+左键 删除</div> -->
-                <!-- more https://stackoverflow.com/questions/38051706/i-am-trying-to-launch-settings-through-adb-using-the-adb-monkey-command-but-it-->
+                </div>
               </div>
-            </div>
+
+              <div class="card">
+                <div class="card-header">
+                  <i class="fas fa-blind"></i>
+                  快捷入口
+                </div>
+                <div class="card-body">
+                  <button class="btn btn-sm btn-sm btn-outline-primary"
+                    @click="runShell('am start -a android.settings.SETTINGS')">
+                    <i class="fas fa-cog"></i>
+                    Settings
+                  </button>
+                  <button class="btn btn-sm btn-outline-primary"
+                    @click="runShell('am start -a com.android.settings.APPLICATION_DEVELOPMENT_SETTINGS')">
+                    <i class="fas fa-wrench"></i>
+                    开发者
+                  </button>
+                  <button class="btn btn-sm btn-outline-primary"
+                    @click="runShell('am start -a android.settings.WIRELESS_SETTINGS')">
+                    <i class="fas fa-wifi"></i>
+                    WIFI
+                  </button>
+                  <hr>
+                  <span v-for="v in userSettings.shortcuts" style="margin-right: 5px">
+                    <el-button round size="small" :title="v.command" @click.exact="triggerShortcut(v)"
+                      @click.alt.exact="removeShortcut(v)">{{!v.name}}</el-button>
+                  </span>
+                  <el-popover placement="right" width="400" trigger="click" v-model="userSettings.visible">
+                    <div>
+                      <h4>增加快捷命令</h4>
+                      <div class="form-group">
+                        <label>名称</label>
+                        <input class="form-control" v-model="userSettings.inputName" type="text">
+                      </div>
+                      <div class="form-group">
+                        <label>SHELL命令</label>
+                        <input class="form-control" v-model="userSettings.inputCommand" type="text">
+                      </div>
+                      <el-button size="small" @click="addShortcut(userSettings.inputName, userSettings.inputCommand)">
+                        添加
+                      </el-button>
+                    </div>
+                    <el-button title="Alt+左键 删除" size="small" round slot="reference"><i class="fas fa-plus"></i>
+                    </el-button>
+                  </el-popover>
+                  <!-- <div style="color: gray; font-size: 0.6em; text-align: right">Alt+左键 删除</div> -->
+                  <!-- more https://stackoverflow.com/questions/38051706/i-am-trying-to-launch-settings-through-adb-using-the-adb-monkey-command-but-it-->
+                </div>
+              </div>
 
 
-            <div class="card">
-              <div class="card-header">
-                <i class="fab fa-app-store-ios"></i>
-                当前应用
-              </div>
-              <div class="card-body">
-                <div class="form-group">
-                  <input v-model="topApp.packageName" class="form-control form-control-sm" placeholder="PackageName">
+              <div class="card">
+                <div class="card-header">
+                  <i class="fab fa-app-store-ios"></i>
+                  当前应用
                 </div>
-                <div class="form-group">
-                  <input v-model="topApp.activity" class="form-control form-control-sm" placeholder="Activity">
-                </div>
-                <div class="btn-group">
-                  <button type="button" class="btn btn-sm btn-outline-primary" @click="refreshTopApp"><i
-                      class="fas fa-sync"></i>
-                    刷新</button>
-                  <button type="button" :disabled="!topApp.packageName" class="btn btn-sm btn-outline-primary"
-                    @click='runShell("am force-stop "+topApp.packageName)'><i class="fas fa-stop-circle"></i>
-                    Kill</button>
-                  <button type="button" :disabled="!topApp.packageName" class="btn btn-sm btn-outline-primary"
-                    @click="addTopAppToShortcut"><i class="fas fa-blind"></i> 添加到快捷入口</button>
+                <div class="card-body">
+                  <div class="form-group">
+                    <input v-model="topApp.packageName" class="form-control form-control-sm" placeholder="PackageName">
+                  </div>
+                  <div class="form-group">
+                    <input v-model="topApp.activity" class="form-control form-control-sm" placeholder="Activity">
+                  </div>
+                  <div class="btn-group">
+                    <button type="button" class="btn btn-sm btn-outline-primary" @click="refreshTopApp"><i
+                        class="fas fa-sync"></i>
+                      刷新</button>
+                    <button type="button" :disabled="!topApp.packageName" class="btn btn-sm btn-outline-primary"
+                      @click='runShell("am force-stop "+topApp.packageName)'><i class="fas fa-stop-circle"></i>
+                      Kill</button>
+                    <button type="button" :disabled="!topApp.packageName" class="btn btn-sm btn-outline-primary"
+                      @click="addTopAppToShortcut"><i class="fas fa-blind"></i> 添加到快捷入口</button>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
         </el-tab-pane>
         <el-tab-pane label="Terminal" name="terminal">
-          <p><code>Ctrl+Ins</code>复制，<code>Shift+Ins</code>粘贴</p>
-          <div ref="xterm" class="xterm-wrapper"></div>
-          <div>
-            <strong>常用命令</strong>
-            <ul>
-              <li>查看IP地址
-                <term-snippet :term="term" command="ifconfig | grep Mask" />
-              </li>
-              <li>查看前台应用
-                <term-snippet :term="term" command="dumpsys activity activities | grep mFocusedActivity" />
-              </li>
-              <li>列出第三方应用
-                <term-snippet :term="term" command="pm list packages -3" />
-              </li>
-              <li>屏幕分辨率
-                <term-snippet :term="term" command="wm size" />
-              </li>
-              <li>点亮屏幕
-                <term-snippet :term="term" command="input keyevent 224"></term-snippet>
-                熄灭屏幕
-                <term-snippet :term="term" command="input keyevent 223"></term-snippet>
-              </li>
-              <li>
-                minicap
-                <term-snippet :term="term" command="LD_LIBRARY_PATH=/data/local/tmp /data/local/tmp/minicap -i">
-                </term-snippet>
-              </li>
-              <li>更多参考 <a href="https://github.com/mzlogin/awesome-adb" target="_blank">awesome-adb</a>
-              </li>
-            </ul>
+          <div class="rightDiv" :style="pageStyle" style="overflow-y:auto">
+            <p><code>Ctrl+Ins</code>复制，<code>Shift+Ins</code>粘贴</p>
+            <div ref="xterm" class="xterm-wrapper"></div>
+            <div>
+              <strong>常用命令</strong>
+              <ul>
+                <li>查看IP地址
+                  <term-snippet :term="term" command="ifconfig | grep Mask" />
+                </li>
+                <li>查看前台应用
+                  <term-snippet :term="term" command="dumpsys activity activities | grep mFocusedActivity" />
+                </li>
+                <li>列出第三方应用
+                  <term-snippet :term="term" command="pm list packages -3" />
+                </li>
+                <li>屏幕分辨率
+                  <term-snippet :term="term" command="wm size" />
+                </li>
+                <li>点亮屏幕
+                  <term-snippet :term="term" command="input keyevent 224"></term-snippet>
+                  熄灭屏幕
+                  <term-snippet :term="term" command="input keyevent 223"></term-snippet>
+                </li>
+                <li>
+                  minicap
+                  <term-snippet :term="term" command="LD_LIBRARY_PATH=/data/local/tmp /data/local/tmp/minicap -i">
+                  </term-snippet>
+                </li>
+                <li>更多参考 <a href="https://github.com/mzlogin/awesome-adb" target="_blank">awesome-adb</a>
+                </li>
+              </ul>
+            </div>
           </div>
         </el-tab-pane>
         <el-tab-pane label="安装管理" name="installmanager">
-          <el-upload ref="upload" class="upload-demo" drag action="/uploads" :on-success="onUpload" multiple>
-            <i class="el-icon-upload"></i>
-            <div class="el-upload__text">将文件拖到此处，或<em>点击上传</em></div>
-            <div class="el-upload__tip" slot="tip">暂时只支持apk的上传</div>
-          </el-upload>
-          <div class="form-group">
-            <label
-              @dblclick='app.installUrl = "https://github.com/appium/java-client/raw/master/src/test/java/io/appium/java_client/ApiDemos-debug.apk"'>URL</label>
-            <input type="text" class="form-control form-control-sm" placeholder="http://..." v-model="app.installUrl">
+          <div class="rightDiv" :style="pageStyle" style="overflow-y:auto">
+            <el-upload ref="upload" class="upload-demo" drag action="/uploads" :on-success="onUpload" multiple>
+              <i class="el-icon-upload"></i>
+              <div class="el-upload__text">将文件拖到此处，或<em>点击上传</em></div>
+              <div class="el-upload__tip" slot="tip">暂时只支持apk的上传</div>
+            </el-upload>
+            <div class="form-group">
+              <label
+                @dblclick='app.installUrl = "https://github.com/appium/java-client/raw/master/src/test/java/io/appium/java_client/ApiDemos-debug.apk"'>URL</label>
+              <input type="text" class="form-control form-control-sm" placeholder="http://..." v-model="app.installUrl">
+            </div>
+            <div>
+              <el-checkbox v-model="app.launch">安装完成后启动应用</el-checkbox>
+            </div>
+            <button class="btn btn-outline-primary btn-sm" @click="appInstall"
+              :disabled="!app.finished || !app.installUrl">安裝</button>
+            <p>
+              <pre v-show="!!app.message" v-text="app.message"></pre>
+              <small><code v-text="app.packageName"></code></small>
+            </p>
           </div>
-          <div>
-            <el-checkbox v-model="app.launch">安装完成后启动应用</el-checkbox>
-          </div>
-          <button class="btn btn-outline-primary btn-sm" @click="appInstall"
-            :disabled="!app.finished || !app.installUrl">安裝</button>
-          <p>
-            <pre v-show="!!app.message" v-text="app.message"></pre>
-            <small><code v-text="app.packageName"></code></small>
-          </p>
         </el-tab-pane>
         <el-tab-pane label="文件管理" name="filemanager">
-          <div class="filemanagerDiv" :style="canvasStyle" style="overflow-y:auto">
+          <div class="rightDiv" :style="pageStyle" style="overflow-y:auto">
             <el-button size="mini" type="primary" @click="getPhoneFile('/sdcard')">返回 sdcard</el-button>
             <el-button size="mini" type="primary" @click="getPhoneFile('..')">返回上层</el-button>
             <el-input size="mini" v-model="phoneDir" placeholder="目标目录" :disabled="true">
@@ -399,31 +405,35 @@
           </div>
         </el-tab-pane>
         <el-tab-pane label="截图" name="screenshot">
-          <a :href="screenshotUrl+'?download=screenshot.jpg'" download>下载截图</a>
+          <div class="rightDiv" :style="pageStyle" style="overflow-y:auto">
+            <a :href="screenshotUrl+'?download=screenshot.jpg'" download>下载截图</a>
+          </div>
         </el-tab-pane>
         <el-tab-pane label="应用管理" name="packagemanager">
-          <el-button icon="el-icon-refresh" size="small" @click="loadPackages">刷新</el-button>
-          <el-table :data="packages" :default-sort="{prop: 'name'}">
-            <el-table-column sortable prop="label" label="应用">
-              <template slot-scope="scope">
-                <img :src="`${deviceUrl}/packages/${scope.row.name}/icon`" onerror="this.onerror='';this.src='/static/images/transparent.png'"
-                  style="position: absolute; top: 50%; margin: -20px; height: 40px; left: 20px;" alt="icon" />
-                <span v-text=" scope.row.label" style="padding-left: 45px"></span>
-              </template>
-            </el-table-column>
-            <el-table-column sortable prop="name" label="包名"></el-table-column>
-            <el-table-column sortable label="版本号">
-              <template slot-scope="scope" v-if="scope.row.versionName">
-                <span v-text="scope.row.versionName"></span>(<span v-text="scope.row.versionCode"></span>)
-              </template>
-            </el-table-column>
-            <el-table-column label="操作">
-              <template slot-scope="scope">
-                <a class="color-red" href="javascript:void(0)" @click="removePackage(scope.row.name)">卸载</a>
-                <a href="javascript:void(0)" @click="appLaunch(scope.row.name)">启动</a>
-              </template>
-            </el-table-column>
-          </el-table>
+          <div class="rightDiv" :style="pageStyle" style="overflow-y:auto">
+            <el-button icon="el-icon-refresh" size="small" @click="loadPackages">刷新</el-button>
+            <el-table :data="packages" :default-sort="{prop: 'name'}">
+              <el-table-column sortable prop="label" label="应用">
+                <template slot-scope="scope">
+                  <img :src="`${deviceUrl}/packages/${scope.row.name}/icon`" onerror="this.onerror='';this.src='/static/images/transparent.png'"
+                    style="position: absolute; top: 50%; margin: -20px; height: 40px; left: 20px;" alt="icon" />
+                  <span v-text=" scope.row.label" style="padding-left: 45px"></span>
+                </template>
+              </el-table-column>
+              <el-table-column sortable prop="name" label="包名"></el-table-column>
+              <el-table-column sortable label="版本号">
+                <template slot-scope="scope" v-if="scope.row.versionName">
+                  <span v-text="scope.row.versionName"></span>(<span v-text="scope.row.versionCode"></span>)
+                </template>
+              </el-table-column>
+              <el-table-column label="操作">
+                <template slot-scope="scope">
+                  <a class="color-red" href="javascript:void(0)" @click="removePackage(scope.row.name)">卸载</a>
+                  <a href="javascript:void(0)" @click="appLaunch(scope.row.name)">启动</a>
+                </template>
+              </el-table-column>
+            </el-table>
+          </div>
         </el-tab-pane>
       </el-tabs>
     </div>
@@ -465,6 +475,9 @@
             opacity: 1,
             width: '400px',
             height: '200px',
+            maxHeight: "unset",
+          },
+          pageStyle: {
             maxHeight: "unset",
           },
           rotation: 0,
@@ -1258,10 +1271,12 @@
             if (canvas.width > canvas.height) {
               // 横屏显示，宽高相等
               this.canvasStyle.maxHeight = canvas.parentElement.clientHeight + "px";
+              this.pageStyle.maxHeight = this.canvasStyle.maxHeight
               this.canvasStyle.height = "auto"
               this.canvasStyle.width = canvas.parentElement.clientHeight + "px"
             } else {
               this.canvasStyle.maxHeight = "unset"
+              this.pageStyle.maxHeight = this.canvasStyle.height
               this.canvasStyle.height = canvas.parentElement.clientHeight + "px"
               this.canvasStyle.width = "auto"
             }
