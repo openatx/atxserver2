@@ -64,7 +64,7 @@ class="container-fluid"
                     <el-button size="mini" disabled>设备离线</el-button>
                 </template>
                 <template v-else-if='"colding" == scope.row.status'>
-                    <el-button disabled :loading="true" size="mini" type="primary">释放中</span>
+                    <el-button disabled :loading="true" size="mini" type="primary">释放中</el-button>
                 </template>
                 <template v-else-if='"busy" == scope.row.status'>
                     <el-button :title="scope.row.userId" style="cursor: not-allowed; background: #f3d19e" size="mini"
@@ -131,14 +131,10 @@ class="container-fluid"
             </template>
         </el-table-column>
 
-       <el-table-column :sort-method="tableSortBy('department')" sortable label="所属部门">
-            <template slot-scope="scope">
-                <!-- <el-input size="mini"></el-input> -->
-                <atx-edit-inline :readonly="!user.admin" :value="scope.row.department"
-                    @change="updateDeviceDepartment(scope.row.udid, $event)">
-                </atx-edit-inline>
-                <!-- <span v-text="prop_propertyId"></span> <i class="fas fa-edit cursor-pointer"></i> -->
-            </template>
+       <el-table-column :sort-method="tableSortBy('location')" sortable label="所属部门(机器)" >
+           <template slot-scope="scope">
+                <span v-text="scope.row.locationProperties.location || scope.row.locationProperties.providerIP"></span>
+           </template>
         </el-table-column>
 
         <!-- <el-table-column prop="prop_brand" label="品牌"></el-table-column> -->
@@ -165,6 +161,7 @@ class="container-fluid"
             new Vue({
                 el: "#app",
                 data: Object.assign({
+                    locationOptions: [],
                     websocketDisconnected: false,
                     user: {
                         name: currentUserName,
@@ -186,6 +183,7 @@ class="container-fluid"
                 }, { "devices": ret.devices }),
                 computed: {
                     tableData() {
+                        let that = this
                         let devices = this.orderedDevices.map(v => {
                             for (const key in v.properties) {
                                 if (v.properties.hasOwnProperty(key)) {
@@ -196,10 +194,21 @@ class="container-fluid"
                             v['display_size'] = display.width + "x" + display.height;
                             return v;
                         })
+
                         const fp = this.filters.platform
                         if (Object.values(fp).some(b => b)) {
                             devices = devices.filter(v => fp[v.platform])
                         }
+
+                        // 将手机中的location字段，和实际维护的location表做匹配并转换
+                        devices.forEach(device=>{
+                            for(let j=0; j < that.locationOptions.length; j++){
+                                if(device['locationProperties']['providerIP'] === that.locationOptions[j]['providerIP']){
+                                    device['locationProperties']['location'] = that.locationOptions[j]['location']
+                                }
+                            }
+                        });
+                        console.log(devices);
                         return devices;
                     },
                     orderedDevices() {
@@ -340,22 +349,6 @@ class="container-fluid"
                             }
                         })
                     },
-                    updateDeviceDepartment(udid, text) { // admin required
-                        $.ajax({
-                            url: "/api/v1/devices/" + udid,
-                            method: "put",
-                            contentType: "application/json",
-                            data: JSON.stringify({
-                                "department": text,
-                            })
-                        }).fail(ret => {
-                            if (ret.status == 400) {
-                                this.$message.error(ret.responseJSON.description)
-                            } else {
-                                this.$message.error(ret.responseText)
-                            }
-                        })
-                    },
                     formatTimeUsed() {
                         // let duration = moment(this.finishedAt) - moment(this.createdAt);
                         // return moment.utc(duration).format('HH:mm:ss')
@@ -422,6 +415,17 @@ class="container-fluid"
                                 event.preventDefault()
                         }
                         console.log(device.udid)
+                    },
+                    getLocationOptions(){
+                        let that = this
+                        $.ajax({
+                            url: "/api/v1/location",
+                            method: "get"
+                        }).then(ret => {
+                            that.locationOptions = ret.location
+                            console.log(ret)
+                            {#this.$message("获取成功")#}
+                        })
                     }
                 },
                 components: {
@@ -470,6 +474,8 @@ class="container-fluid"
                     let wsURL = scheme + "://" + location.host + "/websocket/devicechanges";
                     let ws = new WebSocket(wsURL);
                     let refreshKey = null;
+                    this.getLocationOptions()
+
                     ws.onopen = (evt) => {
                         console.log("Websocket Connected")
                         refreshKey = setInterval(() => {

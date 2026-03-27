@@ -10,36 +10,114 @@
 
 {% block content %}
 <div class="container">
-    <div style="margin: 10px 0px">
-        接口 <a href="/api/v1/admins">/api/v1/admins</a>
-    </div>
-    <div>
-        <form class="form-inline" @submit.prevent="addAdmin">
-            <div class="form-group">
-                <label style="margin-right: 1em">用户邮箱</label>
-                <input style="margin-right: 1em" v-model="formEmail" placeholder="email ..." class="form-control">
-                <button class="btn btn-success">新增管理员</button>
-            </div>
-        </form>
-        <br>
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>邮箱</th>
-                    <th>用户名</th>
-                    <th>上次登录时间</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr v-for="u in users">
-                    <td v-text="u.email"></td>
-                    <td v-text="u.username"></td>
-                    <td v-text="u.lastLoggedInAt"></td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
+    <el-tabs v-model="tabActiveName" @tab-click="handleGetLocation">
+        <el-tab-pane label="管理员管理" name="admin">
+                <div style="margin: 10px 0px">
+                    接口 <a href="/api/v1/admins">/api/v1/admins</a>
+                </div>
+                <div>
+                </div>
+                <div>
+                    <form class="form-inline" @submit.prevent="addAdmin">
+                        <div class="form-group">
+                            <label style="margin-right: 1em">用户邮箱</label>
+                            <input style="margin-right: 1em" v-model="formEmail" placeholder="email ..." class="form-control">
+                            <button class="btn btn-success">新增管理员</button>
+                        </div>
+                    </form>
+                    <br>
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>邮箱</th>
+                                <th>用户名</th>
+                                <th>上次登录时间</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="u in users">
+                                <td v-text="u.email"></td>
+                                <td v-text="u.username"></td>
+                                <td v-text="u.lastLoggedInAt"></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+        </el-tab-pane>
+        <el-tab-pane label="设备-所在地管理" name="dept">
+                 <el-button
+                        size="mini"
+                        type="primary"
+                        @click="openNewLocationDialog"
+                >新建
+                </el-button>
+
+                <el-table
+                    :data="eqtLocationDatas"
+                    stripe
+                    element-loading-text="大爷稍等片刻哟~~~"
+                    border
+                    style="width: 100%; margin-top: 20px"
+                    size="small"
+                    :header-cell-style="tableHeaderColor"
+                >
+                    <el-table-column
+                            prop="location"
+                            label="设备所在地 or 所在机器">
+                    </el-table-column>
+                    <el-table-column
+                            prop="providerIP"
+                            label="机器的IP（如果是USB链接的话）">
+                    </el-table-column>
+                    <el-table-column
+                            label="操作">
+                        <template slot-scope="scope">
+                            <el-button
+                                    size="mini"
+                                    type="primary"
+                                    icon="el-icon-edit"
+                                    circle
+                                    @click="openEditLocationDialog(scope.$index, scope.row)"
+                            >
+                            </el-button
+                            >
+                            <el-button
+                                    size="mini"
+                                    type="danger"
+                                    icon="el-icon-delete"
+                                    circle
+                                    @click="handleDeleteLocation(scope.$index, scope.row)"
+                            >
+                            </el-button
+                            >
+                        </template>
+                    </el-table-column>
+                </el-table>
+
+        </el-tab-pane>
+    </el-tabs>
+
+
+
+
 </div>
+<el-dialog :title="locationOperTitle" :visible.sync="dialogTableVisible">
+  <el-form :model="form">
+    <el-form-item label="所在地 or 所在机器名称" >
+      <el-input v-model="form.location"></el-input>
+    </el-form-item>
+    <el-form-item label="所在机器IP（USB插在哪个机器上）">
+        <el-input v-if="locationOperAction === 'new'" v-model="form.providerIP"></el-input>
+        <el-input v-else :disabled="true" v-model="form.providerIP"></el-input>
+    </el-form-item>
+  </el-form>
+  <div slot="footer" class="dialog-footer">
+    <el-button @click="dialogTableVisible = false">取 消</el-button>
+    <el-button v-if="locationOperAction === 'new'" type="primary" @click="handleNewLocation">确 定</el-button>
+    <el-button v-else="locationOperAction === 'edit'" type="primary" @click="handleEditLocation">保 存</el-button>
+  </div>
+</el-dialog>
+
 {% end %}
 
 {% block script %}
@@ -49,9 +127,20 @@
             new Vue({
                 el: "#app",
                 data: Object.assign({
+                    locationOperTitle: '',
+                    locationOperAction : '',
+                    dialogTableVisible: false,
+                    tabActiveName: "admin",
                     formEmail: "",
                     users: [],
                     token: "",
+                    form:{
+                        "location": "",
+                        "providerIP":"",
+                        "id":""
+                    },
+                    eqtLocationDatas:[
+                    ]
                 }, ret),
                 methods: {
                     addAdmin() {
@@ -65,7 +154,87 @@
                             console.log(ret)
                             this.$message("添加成功")
                         })
-                    }
+                    },
+                    tableHeaderColor ({row, column, rowIndex, columnIndex}) {
+                        if (rowIndex === 0) {
+                            return 'background-color: #D2E9FF;'
+                        }
+                    },
+                    openNewLocationDialog(){
+                        let that = this
+                        that.locationOperAction = 'new'
+                        that.locationOperTitle = '新建'
+                        that.dialogTableVisible = true
+                    },
+                    openEditLocationDialog(index, row){
+                        let that = this
+                        that.locationOperAction = 'edit'
+                        that.locationOperTitle = '编辑'
+                        that.form.location = row.location
+                        that.form.providerIP = row.providerIP
+                        that.form.id = row.id
+                        that.dialogTableVisible = true
+                    },
+                    handleNewLocation(){
+                        let that = this
+                        $.ajax({
+                            url: "/api/v1/location",
+                            method: "post",
+                            data: JSON.stringify({
+                                location: that.form.location,
+                                providerIP: that.form.providerIP
+                            })
+                        }).then(ret => {
+                            console.log(ret)
+                            this.$message("添加成功")
+                            that.dialogTableVisible = false
+                            that.handleGetLocation({'name':'dept'})
+                        })
+
+                    },
+                    handleGetLocation(value){
+                        let that = this
+                        if(value.name === 'dept'){
+                            $.ajax({
+                                url: "/api/v1/location",
+                                method: "get"
+                            }).then(ret => {
+                                that.eqtLocationDatas = ret.location
+                                console.log(ret)
+                            })
+                        }
+                    },
+                    handleEditLocation(){
+                        let that = this
+                        $.ajax({
+                            url: "/api/v1/location/" + that.form.providerIP,
+                            method: "put",
+                            data: JSON.stringify({
+                                    location: that.form.location,
+                                    providerIP: that.form.providerIP
+                            })
+                        }).then(ret => {
+                            console.log(ret)
+                            this.$message("编辑成功")
+                            that.dialogTableVisible = false
+                            that.handleGetLocation({'name':'dept'})
+                        })
+
+
+                    },
+                    handleDeleteLocation(index, row){
+                        let that = this
+                        $.ajax({
+                        url: "/api/v1/location/" + row.providerIP,
+                        method: "delete",
+                        }).then(ret => {
+                            console.log(ret)
+                            this.$message("删除成功")
+                            that.handleGetLocation({'name':'dept'})
+                        })
+
+                    },
+
                 }
             })
         })
