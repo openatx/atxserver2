@@ -6,12 +6,15 @@ import json
 import urllib
 from functools import wraps
 from typing import Union
+from six.moves import http_cookies as Cookie
+from urllib.parse import urlencode
 
 import rethinkdb as rdb
 import tornado.websocket
 from logzero import logger
 from rethinkdb import r
 from tornado import gen
+from tornado.platform.asyncio import to_asyncio_future
 from tornado.httpclient import AsyncHTTPClient, HTTPRequest
 from tornado.ioloop import IOLoop
 from tornado.web import HTTPError, authenticated
@@ -523,3 +526,102 @@ class DeviceBookWSHandler(BaseWebSocketHandler):
             return
 
         self.write_message("device is yours")
+
+
+class CheckMixin(object):
+    def check_host_port(self):
+        host = self.get_argument('host', None)
+        port = self.get_argument('port', None)
+        if not host or not port:
+            hcookie = self.request.headers.get('cookie')
+            if hcookie:
+                cookie = Cookie.SimpleCookie()
+                for hcookie_part in hcookie.split(';'):
+                    hcookie_part = hcookie_part.lstrip()
+                    try:
+                        cookie.load(hcookie_part)
+                    except Cookie.CookieError:
+                        logger.warning('Found malformed cookie')
+                    else:
+                        if 'host' in cookie:
+                            host = cookie['host'].value
+                        if 'port' in cookie:
+                            port = cookie['port'].value
+        return host, port
+
+
+class AndroidDeviceAtxAgentProxyHandler(CheckMixin, AuthRequestHandler):
+    """ device atx agent proxy """
+    async def do_proxy(self, method, *args, **kwargs):
+        host, port = self.check_host_port()
+        if not host or not port:
+            self.set_status(400)  # bad request
+            self.write_json({
+                "success": False,
+                "description": "Missing host and port"
+            })
+        arguments = self.request.query_arguments # 内部是List[bytes]格式
+        arguments.pop('host', None)
+        arguments.pop('port', None)
+        params = {name: self.get_argument(name) for name in arguments}
+        try:
+            if params:
+                url = f'http://{host}:{port}/{args[0]}?{urlencode(params)}'
+            else:
+                url = f'http://{host}:{port}/{args[0]}'
+            logger.info(f'Forward http {method} from {self.request.uri}  <--> {url}')
+            headers = self.request.headers
+            response = await tornado.httpclient.AsyncHTTPClient().fetch(
+                url, method=method, headers=headers, body=self.request.body, allow_nonstandard_methods=True, **kwargs)
+            self.set_cookie("host", host)
+            self.set_cookie("port", port)
+            self.write(response.body)
+        except Exception as e:
+            print(e)
+            self.write_error(500)
+
+    async def get(self, *args, **kwargs):
+        await self.do_proxy('GET', *args, **kwargs)
+
+    async def post(self, *args, **kwargs):
+        await self.do_proxy('POST', *args, **kwargs)
+
+
+AndroidProviderProxyHandler = AndroidDeviceAtxAgentProxyHandler
+
+
+class AndroidDeviceWSProxyHandler(CheckMixin, tornado.websocket.WebSocketHandler):
+    def __init__(self, *args, **kwargs):
+        super(AndroidDeviceWSProxyHandler, self).__init__(*args, **kwargs)
+        self._client = None
+
+    def check_origin(self, origin):
+        return True
+
+    async def open(self, *args, **kwargs):
+        host, port = self.check_host_port()
+        if not host or not port:
+            self.write_message("Missing host and port")
+            self.close()
+            return
+
+        schema = {"http":"ws", "https":"wss"}[self.request.protocol]
+        if args:
+            target_url = f'{schema}://{host}:{port}/{args[0]}'
+        else:
+            target_url = f'{schema}://{host}:{port}/'
+        logger.info(f'Forward websocket from {self.request.uri} <--> {target_url}')
+        self._client = await to_asyncio_future(
+            tornado.websocket.websocket_connect(target_url, on_message_callback=self.on_target_message))
+
+    def on_message(self, message):
+        if self._client is not None:
+            self._client.write_message(message, binary=isinstance(message, bytes))
+
+    def on_target_message(self, message):
+        if message:
+            self.write_message(message, binary=isinstance(message, bytes))
+
+    def on_close(self):
+        if self._client is not None:
+            self._client.close()
