@@ -7,35 +7,58 @@
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <title>{% block title %}Default title{% end %}</title>
 
-    <link rel="stylesheet" href="/static/vendor/fontawesome-5.7.2/css/all.css">
-    <link rel="stylesheet" href="https://unpkg.com/element-ui/lib/theme-chalk/index.css">
+    <link rel="stylesheet" href="/static/vendor/fontawesome-5.7.2/css/index.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/element-plus/dist/index.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.2.1/dist/css/bootstrap.min.css">
-
-    <script src="https://cdn.jsdelivr.net/npm/jquery@3.3.1/dist/jquery.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/vue@2.5.21/dist/vue.js"></script>
+    
+    <script src="https://unpkg.com/vue@3.4.21/dist/vue.global.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/moment@2.23.0/moment.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/element-ui/2.4.11/index.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/element-plus"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.3.1/dist/jquery.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.2.1/dist/js/bootstrap.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/js-base64@2.5.1/base64.min.js"></script>
 
     {% block head %} {% end %}
     {% block style %} {% end %}
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            font-family: verdana, arial, helvetica, sans-serif;
+            color: #525f7f;
+        }
+        .container_body {
+            min-height: 100%;
+            margin-bottom: -50px;
+        }
+        .footer {
+            position: relative;
+            width: 100%;
+            height: 20px;
+            font-size: 80%;
+            padding: 5px 0;
+        }
+        .container_body:after {
+            content: "";
+            display: block;
+        }
+    </style>
 </head>
 
 <body>
-    <div id="content-wrapper">
+    <div class="container_body" id="content-wrapper">
         {% block nav %}
         <nav class="navbar sticky-top navbar-expand-lg navbar-dark bg-dark">
             
-            <div {%block nav_container_class%}class="container"{%end%}>
-                <a class="navbar-brand" href="/">
-                    <span class="title">ATXServer2</span></a>
-                </a>
+            <div {% block nav_container_class %}class="container"{% end %}>
+                <span class="title navbar-brand">ATXServer2</span>
                 <div class="collapse navbar-collapse" id="navbarNavDropdown">
                     <div class="navbar-nav">
                         <a v-for="l in links" :href="l.path" class="nav-item nav-link"
-                            :class="{active: l.path == activePath}">
-                            <i :class="l.icon"></i> {{!l.name}}</a>
+                            :class="{active: activePath === l.path}">
+                            <i :class="l.icon"></i> {{! l.name }}
                         </a>
                         {% block navlinks %}
                         {% end %}
@@ -55,7 +78,7 @@
                             </a>
                             <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
                                 <a class="dropdown-item" href="/user">用户信息</a>
-                                <a class="dropdown-item" href="/logout">Logout</a>
+                                <a class="dropdown-item" @click="logout" >退出登录</a>
                             </div>
                         </div>
                     </div>
@@ -69,26 +92,55 @@
         </nav>
 
         <script>
-            new Vue({
-                el: "#navbarNavDropdown",
-                data: {
-                    links: [{
-                        path: "/devices",
-                        name: "设备列表",
-                        icon: ["fas", "fa-th-list"]
-                        // icon: ["fab", "fa-android"]
-                        // }, {
-                        //     path: "/apples",
-                        //     name: "苹果设备",
-                        //     icon: ["fab", "fa-apple"]
-                    }, {
-                        path: "/uploads",
-                        name: "文件上传",
-                        icon: ["fas fa-cloud-upload-alt"]
-                    }],
-                    activePath: location.pathname,
+            const { createApp, ref, reactive, watch, computed, created, onBeforeMount, onMounted, onUnmounted } = Vue;
+            const {ElMessage, ElMessageBox, ElNotification, FormInstance,ElTree} = ElementPlus;
+
+            const app = createApp({
+                setup() {
+                    const links = ref([
+                        {
+                            path: "/devices",
+                            name: "设备列表",
+                            icon: "fas fa-th-list"
+                        },
+                        {
+                            path: "/uploads",
+                            name: "文件上传",
+                            icon: "fas fa-cloud-upload-alt"
+                        }
+                    ]);
+
+                    const activePath = ref(location.pathname);
+                    function logout() {
+                        ElMessageBox.confirm(
+                            '<div style="text-align:center;font-size:1.2rem;margin-bottom:1rem">确认退出登录吗？</div>',
+                            {
+                                distinguishCancelAndClose: true,
+                                confirmButtonText: '确认',
+                                cancelButtonText: '取消',
+                                dangerouslyUseHTMLString: true,
+                                overflow: true,
+                        }).then(() => {
+                            axios.get('/logout').then(() => {
+                                localStorage.removeItem('token');
+                                localStorage.removeItem('access_token');
+                                location.href = '/';
+                            }).catch(e => {
+                                ElMessage.error(e.message);
+                            });
+                        }).catch(() => {
+                            console.log('取消退出登录');
+                        });
+                    }
+
+                    return {
+                        links,
+                        activePath,
+                        logout,
+                    };
                 }
-            })
+            });
+            app.use(ElementPlus).mount('#navbarNavDropdown');
         </script>
         {% end %}
         <div id="app">

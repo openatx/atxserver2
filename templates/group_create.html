@@ -6,57 +6,125 @@
     <i class="fas fa-users"></i> 创建新组
 </a>
 {% end %}
-
+{% block style %}
+<style>
+    .form-horizontal {
+        border: 1px solid #ddd;
+        margin-top: 50px;
+        padding: 20px;
+        padding-top: 30px;
+        padding-bottom: 30px;
+        border-radius: 10px;
+        background-color: #fff;
+        box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        width: 100%;
+        max-width: 500px;
+        margin: 20px auto;
+    }
+    .form-group {s
+         margin-bottom: 10px;
+    }
+</style>
+{% end %}
 {% block content %}
 <div class="container">
-    <form method="post" action="/api/v1/user/groups" @submit.prevent="submit">
+    <form method="post" class="form-horizontal" action="/api/v1/user/groups" @submit.prevent="submit">
         <div class="form-group">
             <label>GroupID</label>
-            <input type="text" name="id" v-model="id" class="form-control" required>
-            <small class="form-text text-muted">建议全英文，不能包含@</small>
+            <el-input
+                type="text"
+                name="id"
+                v-model="id"
+                maxlength="15"
+                placeholder="只能包含字母、数字和下划线"
+                show-word-limit
+                required>
+            </el-input>
+            <div v-if="idError" class="text-danger">
+                    <span style="font-size: 12px;">{{! idError }}</span>
+            </div>
         </div>
         <div class="form-group">
             <label>GroupName</label>
-            <input type="text" name="name" v-model="name" class="form-control" required>
-            <small class="form-text text-muted">这个可以中文，目前仅作为描述字段</small>
+            <el-input
+                type="text"
+                name="name"
+                v-model="name"
+                maxlength="15"
+                placeholder="请输入组名"
+                show-word-limit
+                required>
+            </el-input>
         </div>
         <button type="submit" class="btn btn-default btn-outline-primary">创建组</button>
+        <div>
+            <a href="/api/v1/user/groups">/api/v1/user/groups</a>
+        </div>
     </form>
-    <div>
-        <a href="/api/v1/user/groups">/api/v1/user/groups</a>
-    </div>
+
 </div>
 {% end %}
 
 {% block script %}
 <script>
-    new Vue({
-        el: "#app",
-        data: {
-            id: "",
-            name: "",
-        },
-        methods: {
-            submit() {
-                $.ajax({
+    const group_create = {
+        setup() {
+            const id = ref("");
+            const name = ref("");
+            const idError = ref("");
+
+            // 正则校验
+            const validateId = (value) => {
+                const regex = /^[a-zA-Z0-9_]+$/; // 允许字母、数字和下划线，不允许包含 @
+                if (!regex.test(value)) {
+                    idError.value = "GroupID 只能包含字母、数字和下划线";
+                } else {
+                    idError.value = "";
+                }
+            };
+
+            // 监听 id 的变化
+            watch(id, (newValue) => {
+                validateId(newValue);
+            });
+            // 提交表单
+            const submit = async () => {
+                if (idError.value) {     // 校验失败
+                    return;
+                };
+                await axios({
                     method: "post",
                     url: "/api/v1/user/groups",
                     data: {
-                        id: this.id,
-                        name: this.name,
-                    }
-                }).done(ret => {
-                    console.log(ret)
-                    window.location.pathname = "/user"
-                }).fail(ret => {
-                    if (ret.status == 400) {
-                        this.$message.error(ret.responseJSON.description)
-                    } else {
-                        this.$message.error(ret.responseText)
+                        id: id.value,
+                        name: name.value,
                     }
                 })
-            }
+                .then(ret => {
+                    console.log(ret.data);
+                    ElMessage.success("组创建成功");
+                    window.location.pathname = "/user";
+                })
+                .catch(ret => {
+                    if (ret.response && ret.response.status === 400) {
+                        ElMessage.error(ret.response.data.description);
+                    } else {
+                        ElMessage.error("创建组失败");
+                    }
+                });
+            };
+
+            return {
+                id,
+                name,
+                submit,
+                idError,
+            };
         }
-    })
+    };
+    createApp(group_create).use(ElementPlus, {
+        locale: ElementPlusLocaleZhCn,
+    }).mount("#app");
+
 </script>
 {% end %}

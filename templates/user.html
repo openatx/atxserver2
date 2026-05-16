@@ -28,9 +28,9 @@
     <div style="margin-top: 10px">
         <div>
             <dl>
-                <dt>Email</dt>
-                <dd>{{!email}}</dd>
-                <dt>Username</dt>
+                <dt>邮箱</dt>
+                <dd>{{! email }}</dd>
+                <dt>用户名</dt>
                 <dd v-text="username"></dd>
             </dl>
         </div>
@@ -48,11 +48,14 @@
         <hr>
         <h4>组管理 <a href="/user/group_create"><small>创建组</small></a></h4>
         <el-table :data="groups">
+            <template #empty>
+                <div>暂无数据</div>
+            </template>
             <el-table-column prop="id" label="名称"></el-table-column>
             <el-table-column prop="name" label="备注"></el-table-column>
             <el-table-column prop="admin" label="管理员">
                 <template slot-scope="scope">
-                    <span v-text="scope.row.admin ? 'true' : 'false'"></span>
+                    <span v-text="scope.row.admin ? '是' : '否'"></span>
                 </template>
             </el-table-column>
         </el-table>
@@ -62,15 +65,34 @@
 
 {% block script %}
 <script>
-    $.getJSON("/api/v1/user")
-        .then((ret) => {
-            console.log(ret)
-            new Vue({
-                el: "#app",
-                data: Object.assign({
-                    token: "",
-                }, ret),
-            })
-        })
+    const user_page = {
+        setup() {
+            const email = ref("");
+            const username = ref("");
+            const token = ref("");
+            async function getUserInfo() {   // 获取用户信息
+                await axios.get("/api/v1/user")
+                   .then((ret) => {
+                        // console.log(ret.data);
+                        token.value = ret.data.token;
+                        email.value = ret.data.email;
+                        username.value = ret.data.username;
+                    })
+                   .catch((err) => {
+                        console.error(err);
+                   });
+            }
+            onMounted(getUserInfo);
+            return {
+                email,
+                username,
+                token,
+            };
+        },
+    };
+    createApp(user_page).use(ElementPlus, {
+        locale: ElementPlusLocaleZhCn,
+    }).mount("#app");
+
 </script>
 {% end %}

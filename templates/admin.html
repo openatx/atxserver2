@@ -6,68 +6,484 @@
 {% end %}
 {% block style %}
 {% end %}
+<style>
+    .active-tabs > .el-tabs__content {
+      padding: 32px;
+      color: #6b778c;
+      font-size: 32px;
+      font-weight: 600;
+    }
+</style>
 
 
 {% block content %}
 <div class="container">
-    <div style="margin: 10px 0px">
-        接口 <a href="/api/v1/admins">/api/v1/admins</a>
-    </div>
-    <div>
-        <form class="form-inline" @submit.prevent="addAdmin">
-            <div class="form-group">
-                <label style="margin-right: 1em">用户邮箱</label>
-                <input style="margin-right: 1em" v-model="formEmail" placeholder="email ..." class="form-control">
-                <button class="btn btn-success">新增管理员</button>
+    <el-tabs v-model="activeName" class="active-tabs" @tab-click="handleClick">
+        <el-tab-pane label="管理员列表" name="admins">
+            <div style="margin: 10px 0px">
+                接口 <a href="/api/v1/admins">/api/v1/admins</a>
             </div>
-        </form>
-        <br>
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>邮箱</th>
-                    <th>用户名</th>
-                    <th>上次登录时间</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr v-for="u in users">
-                    <td v-text="u.email"></td>
-                    <td v-text="u.username"></td>
-                    <td v-text="u.lastLoggedInAt"></td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
+            <div>
+                <el-form class="form-inline" @submit.prevent="addAdmin">
+                    <div class="form-group">
+                        <label style="margin-right: 1em">用户邮箱</label>
+                        <el-input v-model="formEmail" placeholder="email ..." style="width: 200px;margin-right: 1em;" clearable></el-input>
+                        <el-button type="primary">新增管理员</el-button>
+                    </div>
+                </el-form>
+                <br>
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>邮箱</th>
+                            <th>用户名</th>
+                            <th>上次登录时间</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="u in data.users" :key="u.email">
+                            <td>{{! u.email }}</td>
+                            <td>{{! u.username }}</td>
+                            <td>{{! u.lastLoggedInAt }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </el-tab-pane>
+        <el-tab-pane label="管理App" name="apps">
+            <div class="form-inline">
+                <el-form
+                    :model="appForm"
+                    :rules="rules"
+                    ref="appFormRef"
+                    @submit.native.prevent
+                    hide-required-asterisk
+                    status-icon="true"
+                    label-position="left"
+                    style="display: flex;flex-direction: column;align-items: left;justify-content: space-between;"
+                >
+                    <div class="form-inline">
+                        <el-form-item label="App名称" prop="name" style="width: 300px;margin-top: 1em;margin-right: 1em;">
+                            <el-input
+                                name="name"
+                                v-model="appForm.name"
+                                @keydown.enter="submit(appFormRef)"
+                                placeholder="请输入"
+                            >
+                            </el-input>
+                        </el-form-item>
+                        <el-form-item label="平台" prop="platform" style="width: 200px;margin-top: 1em;margin-right: 1em;">
+                            <el-select
+                                name="platform"
+                                v-model="appForm.platform"
+                                @keydown.enter="submit(appFormRef)"
+                                placeholder="平台">
+                                <el-option v-for="item in platformOptions" :label="item.label" :value="item.value"></el-option>
+                            </el-select>
+                        </el-form-item>
+                        <el-form-item v-if="appForm.platform=='Android'" label="App包名" prop="appPackage" style="width: 270px;margin-top: 1em;margin-right: 1em;">
+                            <el-input
+                                name="name"
+                                v-model="appForm.appPackage"
+                                @keydown.enter="submit(appFormRef)"
+                                placeholder="请输入"
+                            >
+                            </el-input>
+                        </el-form-item>
+                        <el-form-item v-if="appForm.platform=='iOS'" label="bundleId" prop="bundleId" style="width: 270px;margin-top: 1em;margin-right: 1em;">
+                            <el-input
+                                name="name"
+                                v-model="appForm.bundleId"
+                                @keydown.enter="submit(appFormRef)"
+                                placeholder="请输入"
+                            >
+                            </el-input>
+                        </el-form-item>
+                        <el-form-item v-if="appForm.platform=='Android'" label="App启动页" prop="appActivity" style="width: 270px;margin-top: 1em;margin-right: 1em;">
+                            <el-input
+                                name="name"
+                                v-model="appForm.appActivity"
+                                @keydown.enter="submit(appFormRef)"
+                                placeholder="请输入"
+                            >
+                            </el-input>
+                        </el-form-item>
+                    </div>
+                    <div class="form-inline">
+                        <el-form-item label="App描述" prop="description" style="width: 300px;margin-top: 1em;margin-right: 1em;">
+                            <el-input
+                                name="description"
+                                v-model="appForm.description"
+                                placeholder="描述"
+                                maxlength="20"
+                            >
+                            </el-input>
+                        </el-form-item>
+                        <el-button type="primary" @click="submit(appFormRef)">添加</el-button>
+                    </div>
+                </el-form>
+            </div>
+            <br>
+            <el-table :data="appData" style="width: 100%">
+                <el-table-column prop="name" label="App名称">
+                    <template #default="scope">
+                        <atx-edit-inline :readonly="admin" :value="scope.row.name"
+                            @change="updateData(scope.row.id, 'name', $event)">
+                        </atx-edit-inline>
+                    </template>
+                </el-table-column>
+                <el-table-column prop="platform" label="平台">
+                    <template #default="scope">
+                        <atx-edit-inline :types="'select'" :options="platformOptions" :readonly="admin" :value="scope.row.platform"
+                            @change="updateData(scope.row.id, 'platform', $event)">
+                        </atx-edit-inline>
+                    </template>
+                </el-table-column>
+                <el-table-column prop="appPackage" label="App BundleID">
+                    <template #default="scope">
+                        <atx-edit-inline v-if="scope.row.platform=='iOS'" :readonly="admin" :value="scope.row.bundleId"
+                            @change="updateData(scope.row.id, 'bundleId', $event)">
+                        </atx-edit-inline>
+                        <span v-else v-text="scope.row.bundleId? scope.row.bundleId : '-'"></span>
+                    </template>
+                </el-table-column>
+                <el-table-column prop="appPackage" label="App包名">
+                    <template #default="scope">
+                        <atx-edit-inline v-if="scope.row.platform=='Android'" :readonly="admin" :value="scope.row.appPackage"
+                            @change="updateData(scope.row.id, 'appPackage', $event)">
+                        </atx-edit-inline>
+                        <span v-else v-text="scope.row.appPackage? scope.row.appPackage : '-'"></span>
+                    </template>
+                </el-table-column>
+                <el-table-column prop="appActivity" label="App启动页">
+                    <template #default="scope">
+                        <atx-edit-inline v-if="scope.row.platform=='Android'" :readonly="admin" :value="scope.row.appActivity"
+                            @change="updateData(scope.row.id, 'appActivity', $event)">
+                        </atx-edit-inline>
+                        <span v-else v-text="scope.row.appActivity? scope.row.appActivity : '-'"></span>
+                    </template>
+                </el-table-column>
+                <el-table-column prop="description" label="描述">
+                    <template #default="scope">
+                        <atx-edit-inline :readonly="admin" :value="scope.row.description"
+                            @change="updateData(scope.row.id, 'description', $event)">
+                        </atx-edit-inline>
+                    </template>
+                </el-table-column>
+                <el-table-column fixed="right" label="操作" min-width="73">
+                    <template #default="scope">
+                        <el-button
+                          :disabled="!(admin)"
+                          class="cursor-pointer"
+                          type="danger"
+                          size="small"
+                          @click="deleteClick(scope.row.id)"
+                        >
+                          删除
+                        </el-button>
+                    </template>
+                </el-table-column>
+            </el-table>
+            <el-dialog v-model="centerDialogVisible" width="500" align-center>
+                <span>
+                  是否要删除该App？
+                </span>
+                <template #footer>
+                  <div class="dialog-footer">
+                    <el-button @click="centerDialogVisible = false">取消</el-button>
+                    <el-button type="primary" @click="deleteRow">
+                      确定
+                    </el-button>
+                  </div>
+                </template>
+            </el-dialog>
+        </el-tab-pane>
+    </el-tabs>
+
+
 </div>
 {% end %}
 
 {% block script %}
 <script>
-    $.getJSON("/api/v1/admins")
-        .then((ret) => {
-            new Vue({
-                el: "#app",
-                data: Object.assign({
-                    formEmail: "",
-                    users: [],
-                    token: "",
-                }, ret),
-                methods: {
-                    addAdmin() {
-                        $.ajax({
-                            url: "/api/v1/admins",
-                            method: "post",
-                            data: JSON.stringify({
-                                email: this.formEmail,
-                            })
-                        }).then(ret => {
-                            console.log(ret)
-                            this.$message("添加成功")
-                        })
-                    }
+    const currentUserEmail = "{{ current_user.email }}";
+    const currentUserName = "{{ current_user.username }}"
+    const admin = "{{current_user.admin}}" == "True" // Python true is "True"
+</script>
+<script>
+    const admins_page = {
+        setup() {
+            const activeName = ref('admins');
+            const centerDialogVisible = ref(false);
+            const handleClick = (tab, event) => {
+                console.log(tab,tab.paneName,tab.props.label, event)
+                if (tab.paneName == "admins") {
+                    fetchData();
+                } else {
+                    fetchApps();
                 }
-            })
-        })
+            };
+
+            const data = reactive({
+                formEmail: "",
+                users: [],
+                token: "",
+            });
+            const appFormRef = ref(null);
+            const appForm = reactive({
+                name: "",
+                platform: "Android",
+                bundleId: "",
+                appPackage: "",
+                appActivity: "",
+                description: "",
+            });
+            const rules = {
+                name: [ { required: true, message: '请输入App名称', trigger: 'blur' } ],
+                platform: [ { required: true, message: '请选择平台', trigger: 'blur' } ],
+                appPackage: [ { required: true, message: '请输入App包名', trigger: 'blur' } ],
+                bundleId: [ { required: true, message: '请输入bundleId', trigger: 'blur' } ],
+                description: [ { max: 20, message: "长度须小于 20 个字符", trigger: ["blur", "change"]} ],
+            };
+            const platformOptions = [
+                { label: "Android", value: "Android" },
+                { label: "iOS", value: "iOS" },
+            ];
+            const submit = (formRef) => {
+                formRef.validate((valid, errors) => {
+                    console.log('valid', valid, 'errors', errors);
+                    if (valid) {
+                        const filteredForm = Object.fromEntries(
+                            Object.entries(appForm).filter(([key, value]) => {
+                                // 这里可以根据需要定义“为空”的条件，例如：
+                                // - 空字符串：value !== ''
+                                // - 空字符串或 null：value !== '' && value !== null
+                                // - 空字符串、null 或 undefined：value !== '' && value !== null && value !== undefined
+                                return value !== '' && value !== null && value !== undefined;
+                            })
+                        );
+                        console.log('submit', filteredForm);
+                        axios({
+                            method: "put",  // HTTP method
+                            url: "/api/v1/user/apps", // URL
+                            headers: {
+                                "contentType": "application/json",
+                                "Authorization": "Bearer " + localStorage.getItem("access_token")
+                            },
+                            data: JSON.stringify(filteredForm), // Request
+                        })
+                           .then((ret) => {
+                                console.log('apps',ret.data);
+                                if (ret.data.success) {
+                                    formRef.resetFields();
+                                    fetchApps();
+                                    ElMessage.success(ret.data.description);
+                                } else {
+                                    ElMessage.warning(ret.data.description);
+                                }
+                            })
+                           .catch((err) => {
+                                ElMessage.error(err.response.data.description);
+                            });
+                    } else {
+                        ElMessage.error((errors.name || errors.platform || errors.appPackage || errors.bundleId || errors.description)[0].message);
+                    }
+                });
+            };
+            const fetchData = () => {
+                axios.get("/api/v1/admins")
+                   .then((ret) => {
+                        Object.assign(data, ret.data);
+                        localStorage.setItem("token", ret.data.token);
+                    })
+            };
+            const appData = ref([]);
+            function fetchApps() {
+                axios.get("/api/v1/apps")
+                   .then((ret) => {
+                        console.log('apps',ret.data.data);
+                        appData.value = ret.data.data;
+                    })
+            };
+            function updateData(id, key, value) {
+                console.log("updateData", id, key, value);
+                if (typeof(value) == "string"){
+                    axios({
+                        method: "post",  // HTTP method
+                        url: `/api/v1/user/apps`, // URL
+                        headers: {
+                            "Content-Type": "application/json",
+                            "Authorization": "Bearer " + localStorage.getItem("access_token")
+                        },
+                        data: JSON.stringify({
+                            id: id,
+                            [key]: value,
+                        })
+                    })
+                       .then((ret) => {
+                            console.log('apps',ret.data);
+                            fetchApps();
+                            if (ret.data.success) {
+                                ElMessage.success(ret.data.description);
+                            } else {
+                                ElMessage.warning(ret.data.description);
+                            }
+                        })
+                       .catch((err) => {
+                            ElMessage.error(err.response.data.description);
+                        });
+                }
+            };
+            const appId = ref("");
+            function deleteClick(id) {
+                appId.value = id;
+                centerDialogVisible.value = true;
+            };
+            function deleteRow() {
+                console.log("deleteClick", appId.value);
+                axios.delete(`/api/v1/user/apps/${appId.value}`)
+                   .then((ret) => {
+                        console.log('apps',ret.data);
+                        fetchApps();
+                        ElMessage.success(ret.data.description);
+                        centerDialogVisible.value = false;
+                    })
+                   .catch((err) => {
+                        ElMessage.error(err.response.data.description);
+                    });
+            };
+            onBeforeMount(fetchData);
+            return {
+                admin,
+                activeName,
+                handleClick,
+                data,
+                appData,
+                platformOptions,
+                appFormRef,
+                appForm,
+                rules,
+                submit,
+                updateData,
+                deleteClick,
+                deleteRow,
+                centerDialogVisible,
+            };
+        },
+        methods: {
+            async addAdmin() {
+                if (!this.data.formEmail) {
+                    ElMessage.error("邮箱不能为空");
+                    return;
+                }
+                await axios({
+                    method: "POST",  // HTTP method
+                    url: "/api/v1/admins", // URL
+                    data: { email: this.data.formEmail }, // Request
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${localStorage.getItem("token")}`
+                    }
+                })
+                   .then((ret) => {
+                        console.log('admins',ret.data);
+                        ElMessage.success("添加成功");
+                    })
+                   .catch((err) => {
+                        ElMessage.error(err.response.data.message);
+                    });
+            },
+        },
+        components: {
+            "atx-edit-inline": {
+                props: {
+                    value: String,
+                    readonly: Boolean,
+                    types: String,
+                    options: Array,
+                },
+                data: function () {
+                    return {
+                        edit: false,
+                        editValue: "",
+                        showEdit: false,
+                    }
+                },
+                methods: {
+                    update() {
+                        // console.log("update",this.types);
+                        if (this.editValue != this.value) {
+                            console.log("update",this.editValue);
+                            this.$emit("change", this.editValue);
+                        }
+                        this.edit = false;
+                    },
+                    onEdit() {
+                        if (!(this.readonly && this.showEdit)) {
+                            return;
+                        }
+                        this.edit = true;
+                        this.editValue = this.value;
+                        this.$nextTick(() => {
+                            if(this.types=='select') {
+                                this.$refs.mySelect.focus();
+                            }else{
+                                this.$refs.input.focus();
+                            }
+                        });
+                    },
+                    showValue(value) {
+                        if (value) {
+                            if (this.types=='select' && this.options) {
+                                const ops = this.options.find(item => item.value == value);
+                                if (ops) {
+                                    return ops.label
+                                }
+                            }
+                            // const st1 = '<el-steps direction="vertical" :space="10" :active="0"><el-step title="';
+                            // const st2 = '" ></el-step></el-steps>';
+                            if (typeof(value) == "object" && value.length > 1) {
+                                // console.log(st1 + value.split("\n").join('" ></el-step><el-step title="') + st2);
+                                console.log(value.length);
+                                return value.join('<br>');
+                                // return st1 + value.split("\n").join('" ></el-step><el-step title="') + st2;
+                            }
+                            return value
+                        }else{
+                            return "-"
+                        };
+                    }
+                },
+                template: `
+                <div>
+                    <div v-if="edit">
+                        <el-form @submit.prevent="update">
+                            <el-input v-if="types=='textarea'" v-model="editValue" type="textarea" @keyup.esc="edit=false" @blur="update" @focus="showEdit=false" style="border-radius: 0;" ref="input" autosize />
+                            <el-select v-else-if="types=='select'" v-model="editValue" @keyup.esc="edit=false" @change="update" @blur="update" @focus="showEdit=false" clearable placeholder="请选择" ref="mySelect">
+                                <el-option v-for="item in options" :key="item.value" :label="item.label" :value="item.value"></el-option>
+                            </el-select>
+                            <el-input v-else v-model="editValue" @keyup.esc="edit=false" @keydown.enter="update" @blur="update" @focus="showEdit=false" style="border-radius: 0;" ref="input" autosize />
+                        </el-form>
+                    </div>
+                    <div v-else @mouseenter="showEdit = true" @mouseleave="showEdit = false" @click="onEdit">
+                        <span v-html="showValue(value)"></span>
+                        <i v-if="readonly && showEdit" class="cursor-pointer" style="vertical-align: middle;">
+                            <el-icon :size="20" style="margin-top: 5px;">
+                                <Edit />
+                            </el-icon>
+                        </i>
+                    </div>
+                </div>`
+            }
+        },
+    };
+    const admin_app = createApp(admins_page);
+    admin_app.use(ElementPlus, {
+        locale: ElementPlusLocaleZhCn,
+    }).mount("#app");
+    for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
+      admin_app.component(key, component)
+    };
+
 </script>
 {% end %}

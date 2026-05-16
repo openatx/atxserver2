@@ -27,11 +27,14 @@
     </el-upload>
 
     <div>
-        <template v-for="f in files">
-            <el-card class="box-card">
-                <img :src="f.iconUrl" alt="icon" style="height: 30px;">
-                {{!f.packageName}}
-                <em>{{!f.versionName}}</em>
+        <template v-for="f in filesList" :key="f.packageName">
+            <el-card v-if="f.md5sum" class="box-card">
+                <i class="fab fa-android" style="font-size: 1.5em;"></i>
+                <!--img :src="f.iconUrl" alt="icon" style="height: 30px;"-->
+                <span v-text="f.packageName" style="font-size: 1em;margin: 0 10px;"></span>
+                <em v-text="f.versionName"></em>
+                <a :href="f.url" v-text="f.fileName" target="_blank" style="margin: 0 10px;"></a>
+                <el-button type="text" @click="deleteFile(f.md5sum)" style="float: right;">删除</el-button>
             </el-card>
         </template>
     </div>
@@ -40,35 +43,68 @@
 
 {% block script %}
 <script>
-    new Vue({
-        el: "#app",
-        data: {
-            title: "hello world",
-            files: [{
-                iconUrl: "/static/images/android-logo-robot.png",
-                packageName: "TODO",
-                versionName: "1.1.2"
-            }],
-        },
-        methods: {
-            onUpload(resp, file, files) {
+    const upload = {
+        setup() {
+            const filesList = ref([]);
+            //
+            //    {
+            //        iconUrl: "/static/images/android-logo-robot.png",
+            //        packageName: "",
+            //        versionName: "",
+            //        md5sum: "",
+            //    }
+            function getFilesList() {
+                // TODO: get files list from server
+                axios.get("/upload").then(res => {
+                    console.log(res.data)
+                    filesList.value = res.data.data;
+                });
+            }
+            const upload = ref(null);
+            function onUpload(resp, file, files) {
                 if (!resp.success) {
-                    this.$message({
-                        message: resp.description,
-                        type: "error",
-                    })
+                    ElMessage.error(resp.description);
                     return
                 }
                 if (!resp.data.iconUrl) {
                     resp.data.iconUrl = "/static/images/android-logo-robot.png"
                 }
-                this.files.push(resp.data)
-                console.log(resp)
-                console.log(file)
-                console.log(files)
-                this.$refs.upload.clearFiles()
+                console.log(resp.data, file, files);
+                if (resp.data && typeof resp.data === 'object'){
+                    getFilesList();
+                    ElMessage.success("上传成功");
+                }
+                //console.log(resp)
+                //console.log(file)
+                //console.log(files)
+                upload.value.clearFiles()
+            };
+            function deleteFile(md5sum) {
+                // TODO: delete file from server
+                axios.delete("/upload", {
+                    data: {
+                        md5sum: md5sum,
+                    }
+                }).then(res => {
+                    console.log(res.data)
+                    getFilesList();
+                    ElMessage.success("删除成功");
+                });
             }
+            onBeforeMount(() => {
+                getFilesList();
+            });
+
+            return {
+                filesList,
+                upload,
+                deleteFile,
+                onUpload,
+            };
         }
-    })
+    };
+    createApp(upload).use(ElementPlus, {
+        locale: ElementPlusLocaleZhCn,
+    }).mount("#app");
 </script>
 {% end %}
