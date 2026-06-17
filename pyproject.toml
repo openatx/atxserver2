@@ -12,7 +12,7 @@ dependencies = [
     "rethinkdb==2.4.2.post1",
     "six>=1.17.0",
     "setuptools>=60.0.0,<70.0.0",
-    "tornado>=5.0",
+    "tornado>=6.5.7",
 ]
 
 [tool.setuptools.packages.find]
